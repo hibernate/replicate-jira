@@ -39,8 +39,7 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 		}
 
 		JiraIssueLink toCreate = new JiraIssueLink();
-		toCreate.type.id = linkType( issueLink.type.id )
-				.orElseGet( context.projectGroup()::defaultIssueLinkTypeId );
+		toCreate.type.id = linkType( issueLink.type.id ).orElse( null );
 		toCreate.inwardIssue.key = issueLink.inwardIssue.key;
 		toCreate.outwardIssue.key = issueLink.outwardIssue.key;
 		context.destinationJiraClient().upsertIssueLink( toCreate );

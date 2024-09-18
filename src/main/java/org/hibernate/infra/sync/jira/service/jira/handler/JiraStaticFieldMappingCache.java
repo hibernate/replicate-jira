@@ -13,24 +13,24 @@ public class JiraStaticFieldMappingCache {
 	private static final Map<String, Map<String, String>> linkType = new ConcurrentHashMap<>();
 	private static final Map<String, Map<String, String>> user = new ConcurrentHashMap<>();
 
-	public static String priority(String projectKey, String sourceId, Function<String, Map<String, String>> onMissing) {
+	public static String priority(String projectKey, String sourceId, Function<String, Map<String, String>> onMissing, String defaultValue) {
 		return priorities.computeIfAbsent( projectKey, onMissing )
-				.get( sourceId );
+				.getOrDefault( sourceId, defaultValue );
 	}
 
-	public static String issueType(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing) {
+	public static String issueType(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing, String defaultValue) {
 		return issueType.computeIfAbsent( projectGroup, onMissing )
-				.get( sourceId );
+				.getOrDefault( sourceId, defaultValue );
 	}
 
-	public static String status(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing) {
+	public static String status(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing, String defaultValue) {
 		return status.computeIfAbsent( projectGroup, onMissing )
-				.get( sourceId );
+				.getOrDefault( sourceId, defaultValue );
 	}
 
-	public static String linkType(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing) {
+	public static String linkType(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing, String defaultValue) {
 		return linkType.computeIfAbsent( projectGroup, onMissing )
-				.get( sourceId );
+				.getOrDefault( sourceId, defaultValue );
 	}
 
 	public static String user(String projectGroup, String sourceId, Function<String, String> onMissing) {

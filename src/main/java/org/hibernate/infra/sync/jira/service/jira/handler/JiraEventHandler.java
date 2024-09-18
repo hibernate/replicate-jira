@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
@@ -13,8 +14,6 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextBody;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.sync.jira.service.reporting.FailureCollector;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
@@ -65,46 +64,76 @@ public abstract class JiraEventHandler implements Runnable {
 	}
 
 	protected Optional<String> priority(String sourceId) {
+		JiraConfig.ValueMapping mappedValues = context.projectGroup().priorities();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.priority( context.projectGroupName(), sourceId, pk -> {
+			Map<String, String> mapping = mappedValues.mapping();
+			if ( !mapping.isEmpty() ) {
+				return mapping;
+			}
+
+			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getPriorities();
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getPriorities();
 
 			return createMapping( source, destination );
-		} ) );
+		}, mappedValues.defaultValue() ) );
 	}
 
 	protected Optional<String> issueType(String sourceId) {
+		JiraConfig.ValueMapping mappedValues = context.projectGroup().issueTypes();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.issueType( context.projectGroupName(), sourceId, pk -> {
+
+			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
+			if ( !mapping.isEmpty() ) {
+				return mapping;
+			}
+
+			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getIssueTypes();
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getIssueTypes();
 
 			return createMapping( source, destination );
-		} ) );
+
+		}, mappedValues.defaultValue() ) );
 	}
 
-	protected Optional<String> status(String sourceId) {
+	protected Optional<String> statusToTransiotion(String sourceId) {
+		JiraConfig.ValueMapping mappedValues = context.projectGroup().statuses();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.status( context.projectGroupName(), sourceId, pk -> {
+			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
+			if ( !mapping.isEmpty() ) {
+				return mapping;
+			}
+
+			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getStatues().values;
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getStatues().values;
 
 			return createMapping( source, destination );
-		} ) );
+		}, mappedValues.defaultValue() ) );
 	}
 
 	protected Optional<String> linkType(String sourceId) {
+		JiraConfig.ValueMapping mappedValues = context.projectGroup().priorities();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.linkType( context.projectGroupName(), sourceId, pk -> {
+			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
+			if ( !mapping.isEmpty() ) {
+				return mapping;
+			}
+
+			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getIssueLinkTypes().issueLinkTypes;
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getIssueLinkTypes().issueLinkTypes;
 
 			return createMapping( source, destination );
-		} ) );
+		}, mappedValues.defaultValue() ) );
 	}
 
 	protected Optional<String> user(JiraUser sourceUser) {
 		if ( sourceUser == null ) {
 			return Optional.empty();
 		}
-		return Optional.ofNullable( JiraStaticFieldMappingCache.user( context.projectGroupName(), sourceUser.accountId, userId -> context.projectGroup().users().get( sourceUser.accountId ) ) );
+		return Optional.ofNullable( JiraStaticFieldMappingCache.user( context.projectGroupName(), sourceUser.accountId, userId -> context.projectGroup().users().mapping().get( sourceUser.accountId ) ) );
 	}
 
 	private static Map<String, String> createMapping(List<JiraSimpleObject> source, List<JiraSimpleObject> destination) {
@@ -180,13 +209,10 @@ public abstract class JiraEventHandler implements Runnable {
 		//      "type": "doc",
 		//      "version": 1
 		//    },
-		placeholder.fields.description = new JiraTextBody();
-		placeholder.fields.description.content.add( new JiraTextContent( "paragraph", List.of(
-				new JiraTextContent( "text", JiraTextContent.simpleText( "This is a placeholder issue. It will be updated at a later point in time. DO NOT EDIT." ) )
-		) ) );
+		placeholder.fields.description = "This is a placeholder issue. It will be updated at a later point in time. DO NOT EDIT.";
 
 		placeholder.fields.project.id = context.project().projectId();
-		placeholder.fields.issuetype.id = context.projectGroup().defaultIssueTypeId();
+		placeholder.fields.issuetype.id = context.projectGroup().issueTypes().defaultValue();
 
 		// just to be sure that these are not sent as part of
 		//  the placeholder request to keep it as simple as it can be:

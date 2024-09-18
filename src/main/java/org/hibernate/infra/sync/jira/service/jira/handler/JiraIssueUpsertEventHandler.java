@@ -8,9 +8,9 @@ import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueTransition;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextBody;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
@@ -42,6 +42,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 			// remote "aka web" links cannot be added in the same request and are also not returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that triggered the sync with an additional call:
 			context.destinationJiraClient().upsertRemoteLink( sourceIssue.key, remoteSelfLink( sourceIssue ) );
+			// TODO: need to figure out how to set the status of an issue sending it as part of the create/update request doesn't work.
 		}
 		catch (JiraRestException e) {
 			failureCollector.critical( "Unable to update destination issue %s: %s".formatted( sourceIssue.key, e.getMessage() ), e );
@@ -71,11 +72,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 
 		destinationIssue.fields.summary = sourceIssue.fields.summary;
 		destinationIssue.fields.description = sourceIssue.fields.description;
-		destinationIssue.fields.description = new JiraTextBody();
-		destinationIssue.fields.description.content.add( prepareDescriptionQuote( sourceIssue ) );
-		if ( sourceIssue.fields.description.content != null ) {
-			destinationIssue.fields.description.content.addAll( sourceIssue.fields.description.content );
-		}
+		destinationIssue.fields.description = prepareDescriptionQuote( sourceIssue ) + sourceIssue.fields.description;
 
 		destinationIssue.fields.labels = sourceIssue.fields.labels;
 		// let's also add fix versions to the labels
@@ -108,33 +105,30 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		destinationIssue.fields.assignee = user( sourceIssue.fields.assignee )
 				.map( JiraUser::new ).orElse( null );
 
+		destinationIssue.transition = new JiraIssueTransition();
+		destinationIssue.transition = statusToTransiotion( sourceIssue.fields.status.id )
+				.map( JiraIssueTransition::new )
+				.orElse( null );
+
 		return destinationIssue;
 	}
 
-	private JiraTextContent prepareDescriptionQuote(JiraIssue issue) {
+	private String prepareDescriptionQuote(JiraIssue issue) {
 		URI issueUri = createJiraIssueUri( issue );
 		URI reporterUri = createJiraUserUri( issue.self, issue.fields.reporter );
 		URI assigneeUri = createJiraUserUri( issue.self, issue.fields.assignee );
-		JiraTextContent quote = new JiraTextContent();
-		quote.type = "blockquote";
-		quote.properties().put( "content", List.of(
-				new JiraTextContent( "paragraph", List.of(
-						new JiraTextContent( "text", JiraTextContent.simpleText( "This issue is created as a copy of " ) ),
-						new JiraTextContent( "text", JiraTextContent.linkContent( issue.key, issueUri ) ),
-						new JiraTextContent( "text", JiraTextContent.simpleText( "." ) )
-				) ),
-				new JiraTextContent( "paragraph", List.of(
-						new JiraTextContent( "text", JiraTextContent.simpleText( "Assigned to: " ) ),
-						new JiraTextContent( "text", assigneeUri == null ? JiraTextContent.simpleText( " Unassigned" ) : JiraTextContent.linkContent( "user " + JiraTextContent.userIdPart( issue.fields.assignee ), assigneeUri ) ),
-						new JiraTextContent( "text", JiraTextContent.simpleText( "." ) )
-				) ),
-				new JiraTextContent( "paragraph", List.of(
-						new JiraTextContent( "text", JiraTextContent.simpleText( "Reported by: " ) ),
-						new JiraTextContent( "text", JiraTextContent.linkContent( "user " + JiraTextContent.userIdPart( issue.fields.reporter ), reporterUri ) ),
-						new JiraTextContent( "text", JiraTextContent.simpleText( "." ) )
-				) )
-		) );
-		return quote;
+		return """
+				{quote}This issue is created as a copy of [%s|%s].
+				
+				Assigned to: %s.
+				
+				Reported by: [user %s|%s].{quote}
+				
+				
+				""".formatted( issue.key, issueUri,
+				assigneeUri == null ? " Unassigned" : "[user %s|%s]".formatted( JiraTextContent.userIdPart( issue.fields.assignee ), assigneeUri ),
+				JiraTextContent.userIdPart( issue.fields.reporter ), reporterUri
+		);
 	}
 
 }
