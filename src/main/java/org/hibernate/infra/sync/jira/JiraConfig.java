@@ -16,13 +16,15 @@ public interface JiraConfig {
 
 		Instance destination();
 
-		@WithDefault("3")
-		String defaultIssueTypeId();
+		ValueMapping users();
 
-		@WithDefault("3")
-		String defaultIssueLinkTypeId();
+		ValueMapping priorities();
 
-		Map<String, String> users();
+		ValueMapping issueLinkTypes();
+
+		ValueMapping statuses();
+
+		ValueMapping issueTypes();
 
 		@WithDefault("false")
 		boolean canSetReporter();
@@ -45,5 +47,15 @@ public interface JiraConfig {
 		String email();
 
 		String token();
+	}
+
+	interface ValueMapping {
+		/**
+		 * @return default value for the downstream JIRA.
+		 */
+		String defaultValue();
+
+		Map<String, String> mapping();
+
 	}
 }

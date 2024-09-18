@@ -7,10 +7,11 @@ import org.hibernate.infra.sync.jira.service.jira.model.JiraBaseObject;
 public class JiraFields extends JiraBaseObject {
 
 	public String summary;
-	public JiraTextBody description;
+	public String description;
 	public JiraSimpleObject priority = new JiraSimpleObject();
 	public JiraSimpleObject issuetype = new JiraSimpleObject();
 	public JiraSimpleObject project = new JiraSimpleObject();
+	public JiraSimpleObject status;
 	public List<String> labels;
 
 	public JiraUser assignee;

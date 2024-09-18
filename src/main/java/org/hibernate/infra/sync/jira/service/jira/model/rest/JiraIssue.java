@@ -9,6 +9,7 @@ public class JiraIssue extends JiraBaseObject {
 	public String key;
 	public URI self;
 	public JiraFields fields;
+	public JiraIssueTransition transition;
 
 	@Override
 	public String toString() {

@@ -1,7 +1,6 @@
 package org.hibernate.infra.sync.jira.service.jira.handler;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
@@ -47,26 +46,18 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 	private JiraComment prepareComment(JiraIssue issue, JiraComment source) {
 		JiraComment comment = new JiraComment();
 		// we add the quote as a first element, and then follow it up with the original comment content:
-		comment.body.content.add( prepareCommentQuote( issue, source ) );
-		comment.body.content.addAll( source.body.content );
+		comment.body = prepareCommentQuote( issue, source ) + source.body;
 
 		return comment;
 	}
 
-	private JiraTextContent prepareCommentQuote(JiraIssue issue, JiraComment comment) {
+	private String prepareCommentQuote(JiraIssue issue, JiraComment comment) {
 		URI jiraCommentUri = createJiraCommentUri( issue, comment );
 		URI jiraUserUri = createJiraUserUri( comment.self, comment.author );
-		JiraTextContent quote = new JiraTextContent();
-		quote.type = "blockquote";
-		quote.properties().put( "content", List.of(
-				new JiraTextContent( "paragraph", List.of(
-						new JiraTextContent( "text", JiraTextContent.linkContent( "A comment", jiraCommentUri ) ),
-						new JiraTextContent( "text", JiraTextContent.simpleText( " was posted by the " ) ),
-						new JiraTextContent( "text", JiraTextContent.linkContent( "user " + JiraTextContent.userIdPart( comment.author ), jiraUserUri ) ),
-						new JiraTextContent( "text", JiraTextContent.simpleText( ":" ) )
-				) )
-		) );
-
-		return quote;
+		return """
+				{quote}This [comment|%s] was posted by the [user %s|%s].{quote}
+				
+				
+				""".formatted( jiraCommentUri, JiraTextContent.userIdPart( comment.author ), jiraUserUri );
 	}
 }
