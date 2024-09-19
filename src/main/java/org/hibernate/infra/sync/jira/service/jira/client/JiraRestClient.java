@@ -116,6 +116,10 @@ public interface JiraRestClient {
 	@Path("/issue/{issueKey}/comment/{commentId}")
 	void deleteComment(@PathParam("issueKey") String issueKey, @PathParam("commentId") String commentId);
 
+	@DELETE
+	@Path("/issueLink/{linkId}")
+	void deleteIssueLink(@PathParam("linkId") String linkId);
+
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
 		return defaultObjectMapper.copy()

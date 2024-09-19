@@ -36,7 +36,8 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 			// all good the issue is not available let's mark the other one as deleted now:
 
 			try {
-				JiraIssue issue = context.destinationJiraClient().getIssue( key );
+				String destinationKey = toDestinationKey( key );
+				JiraIssue issue = context.destinationJiraClient().getIssue( destinationKey );
 				JiraIssue updated = new JiraIssue();
 
 				updated.fields.summary = "DELETED upstream: " + issue.fields.summary;
@@ -47,7 +48,7 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 				updatedLabels.add( "Deleted Upstream" );
 				updated.fields.labels = updatedLabels;
 
-				context.destinationJiraClient().update( issue.key, updated );
+				context.destinationJiraClient().update( destinationKey, updated );
 			}
 			catch (Exception ex) {
 				failureCollector.critical( "Unable to mark the issue %s as deleted: %s".formatted( objectId, ex.getMessage() ), ex );

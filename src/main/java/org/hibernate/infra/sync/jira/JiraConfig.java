@@ -35,6 +35,10 @@ public interface JiraConfig {
 
 	interface JiraProject {
 		String projectId();
+
+		String projectKey();
+
+		String originalProjectKey();
 	}
 
 	interface Instance {

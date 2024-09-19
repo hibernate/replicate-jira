@@ -9,6 +9,7 @@ import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraCommentDeleteEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraCommentUpsertEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueDeleteEventHandler;
+import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueLinkDeleteEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueLinkUpsertEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueUpsertEventHandler;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
@@ -58,7 +59,7 @@ public enum JiraWebhookEventType {
 				throw new IllegalStateException( "Trying to handle an issue link event but source issue id is null: %s".formatted( event ) );
 			}
 			// NOTE: for linking issues we will just trigger an "issue update" handling instead of doing something special (at least for now):
-			return List.of( new JiraIssueUpsertEventHandler( reportingConfig, context, event.issueLink.sourceIssueId ) );
+			return List.of( new JiraIssueLinkDeleteEventHandler( reportingConfig, context, event.issueLink.id, event.issueLink.sourceIssueId, event.issueLink.destinationIssueId, event.issueLink.issueLinkType.id ) );
 		}
 	},
 	COMMENT_CREATED( "comment_created" ) {

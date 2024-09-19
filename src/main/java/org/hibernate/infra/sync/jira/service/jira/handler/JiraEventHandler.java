@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
@@ -26,11 +27,13 @@ public abstract class JiraEventHandler implements Runnable {
 	protected final Long objectId;
 	protected final FailureCollector failureCollector;
 	protected final HandlerProjectContext context;
+	private final Pattern keyToUpdatePattern;
 
 	protected JiraEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
 		this.objectId = id;
 		this.failureCollector = FailureCollector.collector( reportingConfig );
 		this.context = context;
+		this.keyToUpdatePattern = Pattern.compile( "^%s-\\d+".formatted( context.project().originalProjectKey() ) );
 	}
 
 	protected static URI createJiraIssueUri(JiraIssue sourceIssue) {
@@ -187,28 +190,21 @@ public abstract class JiraEventHandler implements Runnable {
 	}
 
 	private Long keyToLong(String key) {
-		return Long.parseLong( key.substring( key.indexOf( '-' ) + 1 ) );
+		return Long.parseLong( key.substring( key.lastIndexOf( '-' ) + 1 ) );
+	}
+
+	protected String toDestinationKey(String key) {
+		if ( keyToUpdatePattern.matcher( key ).matches() ) {
+			return "%s-%d".formatted( context.project().projectKey(), keyToLong( key ) );
+		}
+		return key;
 	}
 
 	private Optional<JiraIssue> createIssuePlaceholder(String expectedKey) {
 		JiraIssue placeholder = new JiraIssue();
 		placeholder.fields = new JiraFields();
 		placeholder.fields.summary = "Sync issue placeholder";
-		// "description": {
-		//      "content": [
-		//        {
-		//          "content": [
-		//            {
-		//              "text": "Order entry fails when selecting supplier.",
-		//              "type": "text"
-		//            }
-		//          ],
-		//          "type": "paragraph"
-		//        }
-		//      ],
-		//      "type": "doc",
-		//      "version": 1
-		//    },
+
 		placeholder.fields.description = "This is a placeholder issue. It will be updated at a later point in time. DO NOT EDIT.";
 
 		placeholder.fields.project.id = context.project().projectId();
