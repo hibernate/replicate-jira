@@ -33,19 +33,20 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 			return;
 		}
 
+		String destinationKey = toDestinationKey( sourceIssue.key );
 		// We don't really need one, but doing so means that we will create the placeholder for it
 		// if the issue wasn't already present in the destination Jira instance
-		JiraIssue destinationIssue = getDestinationIssue( sourceIssue.key );
+		JiraIssue destinationIssue = getDestinationIssue( destinationKey );
 
 		try {
-			context.destinationJiraClient().update( sourceIssue.key, issueToCreate( sourceIssue ) );
+			context.destinationJiraClient().update( destinationKey, issueToCreate( sourceIssue ) );
 			// remote "aka web" links cannot be added in the same request and are also not returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that triggered the sync with an additional call:
-			context.destinationJiraClient().upsertRemoteLink( sourceIssue.key, remoteSelfLink( sourceIssue ) );
+			context.destinationJiraClient().upsertRemoteLink( destinationKey, remoteSelfLink( sourceIssue ) );
 			// TODO: need to figure out how to set the status of an issue sending it as part of the create/update request doesn't work.
 		}
 		catch (JiraRestException e) {
-			failureCollector.critical( "Unable to update destination issue %s: %s".formatted( sourceIssue.key, e.getMessage() ), e );
+			failureCollector.critical( "Unable to update destination issue %s: %s".formatted( destinationKey, e.getMessage() ), e );
 		}
 	}
 

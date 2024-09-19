@@ -14,9 +14,9 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 
 	@Override
 	protected void doRun() {
-		JiraIssueLink issueLink = null;
+		JiraIssueLink sourceLink = null;
 		try {
-			issueLink = context.sourceJiraClient().getIssueLink( objectId );
+			sourceLink = context.sourceJiraClient().getIssueLink( objectId );
 		}
 		catch (JiraRestException e) {
 			failureCollector.critical( "Source issue link %d was not found through the REST API".formatted( objectId ), e );
@@ -25,23 +25,25 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 		}
 
 		// make sure that both sides of the link exist:
-		getDestinationIssue( issueLink.outwardIssue.key );
-		JiraIssue issue = getDestinationIssue( issueLink.inwardIssue.key );
+		String outwardIssue = toDestinationKey( sourceLink.outwardIssue.key );
+		String inwardIssue = toDestinationKey( sourceLink.inwardIssue.key );
+		getDestinationIssue( outwardIssue );
+		JiraIssue issue = getDestinationIssue( inwardIssue );
 
 		if ( issue.fields.issuelinks != null ) {
 			// do we already have this issue link or not ?
 			for ( JiraIssueLink issuelink : issue.fields.issuelinks ) {
-				if ( issuelink.outwardIssue.key.equals( issueLink.outwardIssue.key )
-						&& issuelink.type.name.equals( issueLink.type.name ) ) {
+				if ( issuelink.outwardIssue.key.equals( outwardIssue )
+						&& issuelink.type.name.equals( sourceLink.type.name ) ) {
 					return;
 				}
 			}
 		}
 
 		JiraIssueLink toCreate = new JiraIssueLink();
-		toCreate.type.id = linkType( issueLink.type.id ).orElse( null );
-		toCreate.inwardIssue.key = issueLink.inwardIssue.key;
-		toCreate.outwardIssue.key = issueLink.outwardIssue.key;
+		toCreate.type.id = linkType( sourceLink.type.id ).orElse( null );
+		toCreate.inwardIssue.key = inwardIssue;
+		toCreate.outwardIssue.key = outwardIssue;
 		context.destinationJiraClient().upsertIssueLink( toCreate );
 	}
 }

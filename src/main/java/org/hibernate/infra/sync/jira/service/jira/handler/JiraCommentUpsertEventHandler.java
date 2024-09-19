@@ -22,24 +22,26 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 		JiraIssue issue = context.sourceJiraClient().getIssue( issueId );
 		JiraComment comment = context.sourceJiraClient().getComment( issueId, objectId );
 
+		String destinationKey = toDestinationKey( issue.key );
+
 		// We are going to assume that the Jira issue was already synced downstream,
 		//  and try to find its comments. If the issue is not yet there, then we'll just fail here:
 		JiraComments destinationComments = null;
 		try {
-			destinationComments = context.destinationJiraClient().getComments( issue.key, 0, MAX_COMMENTS_RESULTS );
+			destinationComments = context.destinationJiraClient().getComments( destinationKey, 0, MAX_COMMENTS_RESULTS );
 		}
 		catch (JiraRestException e) {
-			failureCollector.critical( "Failed to find an issue " + issue.key + " in the destination Jira. Unable to sync the comments.", e );
+			failureCollector.critical( "Failed to find an issue " + destinationKey + " in the destination Jira. Unable to sync the comments.", e );
 			return;
 		}
 
 		Optional<JiraComment> destComment = findComment( comment, destinationComments );
 		if ( destComment.isPresent() ) {
 			String commentId = destComment.get().id;
-			context.destinationJiraClient().update( issue.key, commentId, prepareComment( issue, comment ) );
+			context.destinationJiraClient().update( destinationKey, commentId, prepareComment( issue, comment ) );
 		}
 		else {
-			context.destinationJiraClient().create( issue.key, prepareComment( issue, comment ) );
+			context.destinationJiraClient().create( destinationKey, prepareComment( issue, comment ) );
 		}
 	}
 

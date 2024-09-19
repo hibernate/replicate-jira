@@ -17,17 +17,18 @@ public class JiraCommentDeleteEventHandler extends JiraCommentEventHandler {
 	@Override
 	protected void doRun() {
 		JiraIssue issue = context.sourceJiraClient().getIssue( issueId );
+		String destinationKey = toDestinationKey( issue.key );
 		try {
 			JiraComment comment = context.sourceJiraClient().getComment( issueId, objectId );
 		}
 		catch (JiraRestException e) {
 			if ( e.statusCode() == 404 ) {
 				// all good comment is deleted
-				JiraComments comments = context.destinationJiraClient().getComments( issue.key, 0, MAX_COMMENTS_RESULTS );
+				JiraComments comments = context.destinationJiraClient().getComments( destinationKey, 0, MAX_COMMENTS_RESULTS );
 
 				Optional<JiraComment> found = findComment( Long.toString( objectId ), comments );
 
-				found.ifPresent( jiraComment -> context.destinationJiraClient().deleteComment( issue.key, jiraComment.id ) );
+				found.ifPresent( jiraComment -> context.destinationJiraClient().deleteComment( destinationKey, jiraComment.id ) );
 			}
 			else {
 				throw e;
