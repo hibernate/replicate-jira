@@ -10,6 +10,7 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueTypes;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
@@ -119,6 +120,10 @@ public interface JiraRestClient {
 	@DELETE
 	@Path("/issueLink/{linkId}")
 	void deleteIssueLink(@PathParam("linkId") String linkId);
+
+	@GET
+	@Path( "/search" )
+	JiraIssues find(@QueryParam("jql") String query, @QueryParam("startAt") int startAt, @QueryParam("maxResults") int maxResults);
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
