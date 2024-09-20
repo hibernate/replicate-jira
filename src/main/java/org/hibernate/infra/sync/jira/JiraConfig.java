@@ -31,6 +31,16 @@ public interface JiraConfig {
 
 		Map<String, JiraProject> projects();
 
+		Scheduled scheduled();
+
+	}
+
+	interface Scheduled {
+		String cron();
+
+		// look for issues updated "yesterday"
+		@WithDefault("-1d")
+		String timeFilter();
 	}
 
 	interface JiraProject {

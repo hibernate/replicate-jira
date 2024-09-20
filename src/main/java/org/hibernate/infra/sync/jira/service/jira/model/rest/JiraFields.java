@@ -19,6 +19,7 @@ public class JiraFields extends JiraBaseObject {
 	public List<JiraSimpleObject> fixVersions;
 	// NOTE: this one is for "read-only" purposes, to create links a different API has to be used
 	public List<JiraIssueLink> issuelinks;
+	public JiraComments comment;
 
 
 	@Override
