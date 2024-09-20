@@ -102,6 +102,10 @@ public enum JiraWebhookEventType {
 		this.name = name;
 	}
 
+	public String getName() {
+		return name;
+	}
+
 	public static Optional<JiraWebhookEventType> of(String webhookEvent) {
 		if ( webhookEvent == null ) {
 			return Optional.empty();
