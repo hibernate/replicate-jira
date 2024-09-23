@@ -3,15 +3,16 @@ package org.hibernate.infra.sync.jira.service.jira.handler;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueTransition;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextContent;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 
@@ -43,7 +44,9 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 			// remote "aka web" links cannot be added in the same request and are also not returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that triggered the sync with an additional call:
 			context.destinationJiraClient().upsertRemoteLink( destinationKey, remoteSelfLink( sourceIssue ) );
-			// TODO: need to figure out how to set the status of an issue sending it as part of the create/update request doesn't work.
+			// issue status can be updated only through transition:
+			prepareTransition( sourceIssue )
+					.ifPresent( jiraTransition -> context.destinationJiraClient().transition( destinationKey, jiraTransition ) );
 		}
 		catch (JiraRestException e) {
 			failureCollector.critical( "Unable to update destination issue %s: %s".formatted( destinationKey, e.getMessage() ), e );
@@ -106,12 +109,12 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		destinationIssue.fields.assignee = user( sourceIssue.fields.assignee )
 				.map( JiraUser::new ).orElse( null );
 
-		destinationIssue.transition = new JiraIssueTransition();
-		destinationIssue.transition = statusToTransiotion( sourceIssue.fields.status.id )
-				.map( JiraIssueTransition::new )
-				.orElse( null );
-
 		return destinationIssue;
+	}
+
+	private Optional<JiraTransition> prepareTransition(JiraIssue sourceIssue) {
+		return statusToTransition( sourceIssue.fields.status.id )
+				.map( tr -> new JiraTransition( tr, "Upstream issue status updated to: " + sourceIssue.fields.status.name ) );
 	}
 
 	private String prepareDescriptionQuote(JiraIssue issue) {

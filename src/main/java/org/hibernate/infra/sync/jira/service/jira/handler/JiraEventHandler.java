@@ -100,10 +100,10 @@ public abstract class JiraEventHandler implements Runnable {
 		}, mappedValues.defaultValue() ) );
 	}
 
-	protected Optional<String> statusToTransiotion(String sourceId) {
+	protected Optional<String> statusToTransition(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().statuses();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.status( context.projectGroupName(), sourceId, pk -> {
-			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
+			Map<String, String> mapping = context.projectGroup().statuses().mapping();
 			if ( !mapping.isEmpty() ) {
 				return mapping;
 			}
@@ -117,7 +117,7 @@ public abstract class JiraEventHandler implements Runnable {
 	}
 
 	protected Optional<String> linkType(String sourceId) {
-		JiraConfig.ValueMapping mappedValues = context.projectGroup().priorities();
+		JiraConfig.ValueMapping mappedValues = context.projectGroup().issueLinkTypes();
 		return Optional.ofNullable( JiraStaticFieldMappingCache.linkType( context.projectGroupName(), sourceId, pk -> {
 			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
 			if ( !mapping.isEmpty() ) {

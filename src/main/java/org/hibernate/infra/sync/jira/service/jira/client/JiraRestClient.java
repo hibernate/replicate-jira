@@ -13,6 +13,7 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -122,8 +123,12 @@ public interface JiraRestClient {
 	void deleteIssueLink(@PathParam("linkId") String linkId);
 
 	@GET
-	@Path( "/search" )
+	@Path("/search")
 	JiraIssues find(@QueryParam("jql") String query, @QueryParam("startAt") int startAt, @QueryParam("maxResults") int maxResults);
+
+	@POST
+	@Path("/issue/{issueKey}/transitions")
+	void transition(@PathParam("issueKey") String issueKey, JiraTransition transition);
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
