@@ -32,6 +32,7 @@ public interface ReportingConfig {
 
 	enum Type {
 		LOG,
+		THROW,
 		GITHUB_ISSUE;
 	}
 }

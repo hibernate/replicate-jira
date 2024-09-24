@@ -6,8 +6,17 @@ package org.hibernate.infra.sync.jira.service.reporting;
 public interface FailureCollector extends AutoCloseable {
 
 	static FailureCollector collector(ReportingConfig config) {
-		// TODO: add GH reporting:
-		return LoggingFailureCollector.INSTANCE;
+		switch ( config.type() ) {
+			case LOG -> {
+				return LoggingFailureCollector.INSTANCE;
+			}
+			case THROW -> {
+				return new ThrowingFailureCollector();
+			}
+			case GITHUB_ISSUE -> // TODO: add GH reporting:
+					throw new UnsupportedOperationException( "Github issue reporting is not yet supported" );
+			default -> throw new IllegalArgumentException( "Unsupported failure collector type: %s".formatted( config.type() ) );
+		}
 	}
 
 	void warning(String details);

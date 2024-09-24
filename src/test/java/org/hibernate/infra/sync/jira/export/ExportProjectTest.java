@@ -1,4 +1,4 @@
-package org.hibernate.infra.sync.jira;
+package org.hibernate.infra.sync.jira.export;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestClientBuilder;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
@@ -23,6 +24,12 @@ import org.apache.commons.csv.CSVPrinter;
 
 @QuarkusTest
 class ExportProjectTest {
+
+	// Set the PROJECT_ID to a project to export
+	// 10060 - HV
+	// Can either be an id or a project key:
+	// If not all issues have to be exported update the `query` to find only the ones that are required.
+	private static final String PROJECT_ID = "10060";
 
 	private static final int MAX_LABELS_LIMIT = 10;
 	// in the service we map status id to a transition, but with the export we need to have name-to-name mapping instead:
@@ -87,9 +94,11 @@ class ExportProjectTest {
 
 		JiraIssues issues;
 
-		try ( final FileWriter fw = new FileWriter( "target/HV.csv" ); final CSVPrinter printer = new CSVPrinter( fw, csvFormat ) ) {
+		String query = "project=%d ORDER BY key".formatted( PROJECT_ID );
+
+		try ( final FileWriter fw = new FileWriter( "target/jira-exported-project%d.csv".formatted( PROJECT_ID ) ); final CSVPrinter printer = new CSVPrinter( fw, csvFormat ) ) {
 			do {
-				issues = source.find( "project=10060 ORDER BY key", start, max );
+				issues = source.find( query, start, max );
 				for ( JiraIssue issue : issues.issues ) {
 					List<Object> row = new ArrayList<>();
 					row.add( issue.key );

@@ -39,7 +39,8 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 		if ( sourceIssue.fields.issuelinks != null ) {
 			// check that there's really no such issue:
 			for ( JiraIssueLink issuelink : sourceIssue.fields.issuelinks ) {
-				if ( issuelink.outwardIssue.key.equals( destinationIssue.key ) && issuelink.type.id.equals( issueLinkTypeId ) ) {
+				if ( ( destinationIssue.key.equals( issuelink.outwardIssue.key )
+						|| destinationIssue.key.equals( issuelink.inwardIssue.key ) ) && issuelink.type.id.equals( issueLinkTypeId ) ) {
 					// we found one so we won't be deleting anything here !
 					return;
 				}
@@ -57,7 +58,7 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 		if ( issue.fields.issuelinks != null ) {
 			// do we already have this issue link or not ?
 			for ( JiraIssueLink issuelink : issue.fields.issuelinks ) {
-				if ( issuelink.inwardIssue.key.equals( outwardIssue )
+				if ( (outwardIssue.equals( issuelink.inwardIssue.key ) || inwardIssue.equals( issuelink.outwardIssue.key ))
 						&& issuelink.type.id.equals( linkType ) ) {
 					context.destinationJiraClient().deleteIssueLink( issuelink.id );
 				}
