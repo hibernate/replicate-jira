@@ -3,12 +3,14 @@ package org.hibernate.infra.sync.jira.service.jira.handler;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraTextContent;
@@ -47,6 +49,8 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 			// issue status can be updated only through transition:
 			prepareTransition( sourceIssue )
 					.ifPresent( jiraTransition -> context.destinationJiraClient().transition( destinationKey, jiraTransition ) );
+			// and then we want to add a link to a parent, if the issue was actually a sub-task which we've created as a task:
+			prepareParentLink( destinationKey, sourceIssue ).ifPresent( context.destinationJiraClient()::upsertIssueLink );
 		}
 		catch (JiraRestException e) {
 			failureCollector.critical( "Unable to update destination issue %s: %s".formatted( destinationKey, e.getMessage() ), e );
@@ -76,7 +80,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 
 		destinationIssue.fields.summary = sourceIssue.fields.summary;
 		destinationIssue.fields.description = sourceIssue.fields.description;
-		destinationIssue.fields.description = prepareDescriptionQuote( sourceIssue ) + sourceIssue.fields.description;
+		destinationIssue.fields.description = "%s%s".formatted( prepareDescriptionQuote( sourceIssue ), Objects.toString( sourceIssue.fields.description, "" ) );
 
 		destinationIssue.fields.labels = sourceIssue.fields.labels;
 		// let's also add fix versions to the labels
@@ -115,6 +119,30 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 	private Optional<JiraTransition> prepareTransition(JiraIssue sourceIssue) {
 		return statusToTransition( sourceIssue.fields.status.id )
 				.map( tr -> new JiraTransition( tr, "Upstream issue status updated to: " + sourceIssue.fields.status.name ) );
+	}
+
+	private Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {
+		if ( sourceIssue.fields.parent != null ) {
+			String parent = toDestinationKey( sourceIssue.fields.parent.key );
+			// we don't really need it, but as usual we are making sure that the issue is available downstream:
+			JiraIssue parentIssue = getDestinationIssue( parent );
+			JiraIssueLink link = new JiraIssueLink();
+			link.type.id = context.projectGroup().issueLinkTypes().parentLinkType();
+			//  "name": "Depend",
+			//  "inward": "is depended on by",
+			//  "outward": "depends on",
+			//
+			// TODO: Jira is sending a relates-to link created hook on its own
+			//  and it has the inward/outward sides opposite to what we do here
+			//  Let's double check what will happen with actual downstream jira
+			//  (there a depends on link should be created along side the one triggered automatically by the source JIRA).
+			link.inwardIssue.key = destinationKey;
+			link.outwardIssue.key = parent;
+			return Optional.of( link );
+		}
+		else {
+			return Optional.empty();
+		}
 	}
 
 	private String prepareDescriptionQuote(JiraIssue issue) {

@@ -20,6 +20,7 @@ public class JiraFields extends JiraBaseObject {
 	// NOTE: this one is for "read-only" purposes, to create links a different API has to be used
 	public List<JiraIssueLink> issuelinks;
 	public JiraComments comment;
+	public JiraIssue parent;
 
 
 	@Override
