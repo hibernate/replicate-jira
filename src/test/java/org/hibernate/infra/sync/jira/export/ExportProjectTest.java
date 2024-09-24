@@ -18,18 +18,27 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
+@TestProfile(ExportProjectTest.Profile.class)
 @QuarkusTest
 class ExportProjectTest {
+	public static class Profile implements QuarkusTestProfile {
+		@Override
+		public Map<String, String> getConfigOverrides() {
+			return Map.of( "jira.project-group.\"hibernate\".source.api-uri", "https://hibernate.atlassian.net/rest/api/2" );
+		}
+	}
 
 	// Set the PROJECT_ID to a project to export
 	// 10060 - HV
 	// Can either be an id or a project key:
 	// If not all issues have to be exported update the `query` to find only the ones that are required.
-	private static final String PROJECT_ID = "10060";
+	private static final String PROJECT_ID = "HV";
 
 	private static final int MAX_LABELS_LIMIT = 10;
 	// in the service we map status id to a transition, but with the export we need to have name-to-name mapping instead:
@@ -38,35 +47,35 @@ class ExportProjectTest {
 
 	static {
 		statusMap = new HashMap<>();
-		statusMap.put( "Awaiting Test Case", "Open" );
-		statusMap.put( "Awaiting Response", "Open" );
-		statusMap.put( "Waiting for review", "Open" );
-		statusMap.put( "Awaiting Contribution", "Open" );
-		statusMap.put( "Reopened", "Reopened" );
-		statusMap.put( "To Do", "To Do" );
+		statusMap.put( "Awaiting Test Case", "New" );
+		statusMap.put( "Awaiting Response", "New" );
+		statusMap.put( "Waiting for review", "New" );
+		statusMap.put( "Awaiting Contribution", "New" );
+		statusMap.put( "Reopened", "New" );
+		statusMap.put( "To Do", "New" );
 		statusMap.put( "In Progress", "In Progress" );
-		statusMap.put( "Stalled", "Stalled" );
-		statusMap.put( "In Review", "In Review" );
-		statusMap.put( "Review", "In Review" );
-		statusMap.put( "Resolved", "Resolved" );
+		statusMap.put( "Stalled", "In Progress" );
+		statusMap.put( "In Review", "In Progress" );
+		statusMap.put( "Review", "In Progress" );
+		statusMap.put( "Resolved", "Closed" );
 		statusMap.put( "Closed", "Closed" );
-		statusMap.put( "Done", "Done" );
+		statusMap.put( "Done", "Closed" );
 
 		issueTypeMap = new HashMap<>();
 
-		issueTypeMap.put( "Bug", "Bug");
-		issueTypeMap.put( "New Feature", "New Feature");
-		issueTypeMap.put( "Task", "Task");
-		issueTypeMap.put( "Improvement", "Improvement");
-		issueTypeMap.put( "Patch", "Patch");
-		issueTypeMap.put( "Deprecation", "");
-		issueTypeMap.put( "Sub-task", "Sub-task");
-		issueTypeMap.put( "Subtask", "Sub-task");
-		issueTypeMap.put( "Remove Feature", "Task");
-		issueTypeMap.put( "Technical task", "Technical task");
-		issueTypeMap.put( "Epic", "Epic");
-		issueTypeMap.put( "Story", "Story");
-		issueTypeMap.put( "Proposal", "Task");
+		issueTypeMap.put( "Bug", "Bug" );
+		issueTypeMap.put( "New Feature", "Story" );
+		issueTypeMap.put( "Task", "Task" );
+		issueTypeMap.put( "Improvement", "Story" );
+		issueTypeMap.put( "Patch", "Task" );
+		issueTypeMap.put( "Deprecation", "Task" );
+		issueTypeMap.put( "Sub-task", "Sub-task" );
+		issueTypeMap.put( "Subtask", "Sub-task" );
+		issueTypeMap.put( "Remove Feature", "Task" );
+		issueTypeMap.put( "Technical task", "Task" );
+		issueTypeMap.put( "Epic", "Epic" );
+		issueTypeMap.put( "Story", "Story" );
+		issueTypeMap.put( "Proposal", "Task" );
 	}
 
 	@Inject
@@ -78,7 +87,7 @@ class ExportProjectTest {
 		JiraConfig.JiraProjectGroup projectGroup = jiraConfig.projectGroup().get( "hibernate" );
 		JiraRestClient source = JiraRestClientBuilder.of( projectGroup.source() );
 
-		List<String> headers = new ArrayList<>( List.of( "key", "issue type", "status", "project key", "project name", "reporter", "assignee", "summary", "description" ) );
+		List<String> headers = new ArrayList<>( List.of( "key", "issue type", "status", "project key", "project name", "reporter key", "reporter name", "assignee key", "assignee name", "summary", "description" ) );
 
 		for ( int i = 0; i < MAX_LABELS_LIMIT; i++ ) {
 			headers.add( "labels" );
@@ -94,9 +103,9 @@ class ExportProjectTest {
 
 		JiraIssues issues;
 
-		String query = "project=%d ORDER BY key".formatted( PROJECT_ID );
+		String query = "project=%s ORDER BY key".formatted( PROJECT_ID );
 
-		try ( final FileWriter fw = new FileWriter( "target/jira-exported-project%d.csv".formatted( PROJECT_ID ) ); final CSVPrinter printer = new CSVPrinter( fw, csvFormat ) ) {
+		try ( final FileWriter fw = new FileWriter( "target/jira-exported-project-%s.csv".formatted( PROJECT_ID ) ); final CSVPrinter printer = new CSVPrinter( fw, csvFormat ) ) {
 			do {
 				issues = source.find( query, start, max );
 				for ( JiraIssue issue : issues.issues ) {
@@ -106,8 +115,12 @@ class ExportProjectTest {
 					row.add( statusMap.getOrDefault( issue.fields.status.name, "" ) );
 					row.add( issue.fields.project.properties().get( "key" ) );
 					row.add( issue.fields.project.name );
-					row.add( issue.fields.reporter == null ? null : projectGroup.users().mapping().getOrDefault( issue.fields.reporter.accountId, null ) );
-					row.add( issue.fields.assignee == null ? null : projectGroup.users().mapping().getOrDefault( issue.fields.assignee.accountId, null ) );
+					Object reporter = issue.fields.reporter == null ? null : projectGroup.users().mapping().getOrDefault( issue.fields.reporter.accountId, null );
+					row.add( reporter );
+					row.add( reporter !=null ? issue.fields.reporter.displayName : null );
+					Object assignee = issue.fields.assignee == null ? null : projectGroup.users().mapping().getOrDefault( issue.fields.assignee.accountId, null );
+					row.add( assignee );
+					row.add( assignee !=null ? issue.fields.assignee.displayName : null );
 					row.add( issue.fields.summary );
 					row.add( issue.fields.description );
 					row.add( issue.key );
