@@ -20,7 +20,7 @@ public interface JiraConfig {
 
 		ValueMapping priorities();
 
-		ValueMapping issueLinkTypes();
+		IssueLinkTypeValueMapping issueLinkTypes();
 
 		ValueMapping statuses();
 
@@ -38,7 +38,7 @@ public interface JiraConfig {
 	interface Scheduled {
 		String cron();
 
-		// look for issues updated "yesterday"
+		// look for issues updated since "yesterday"
 		@WithDefault("-1d")
 		String timeFilter();
 	}
@@ -70,6 +70,16 @@ public interface JiraConfig {
 		String defaultValue();
 
 		Map<String, String> mapping();
+
+	}
+
+	interface IssueLinkTypeValueMapping extends ValueMapping {
+		/**
+		 * @return the value of the issue link type id to use for linking a "sub-task" ticket to a "parent"
+		 * NOTE: Since changing issue to a subtask doesn't work through the REST API we are creating a regular
+		 * task instead and adding an extra link for it.
+		 */
+		String parentLinkType();
 
 	}
 }
