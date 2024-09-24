@@ -33,7 +33,8 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 		if ( issue.fields.issuelinks != null ) {
 			// do we already have this issue link or not ?
 			for ( JiraIssueLink issuelink : issue.fields.issuelinks ) {
-				if ( issuelink.outwardIssue.key.equals( outwardIssue )
+				if ( ( outwardIssue.equals( issuelink.outwardIssue.key )
+						|| inwardIssue.equals( issuelink.inwardIssue.key ) )
 						&& issuelink.type.name.equals( sourceLink.type.name ) ) {
 					return;
 				}

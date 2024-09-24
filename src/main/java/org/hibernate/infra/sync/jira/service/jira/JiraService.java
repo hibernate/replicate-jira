@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -30,6 +31,7 @@ import io.quarkus.scheduler.Scheduled;
 import io.quarkus.scheduler.Scheduler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.ConstraintViolationException;
 
 @ApplicationScoped
 public class JiraService {
@@ -97,7 +99,7 @@ public class JiraService {
 				FailureCollector failureCollector = FailureCollector.collector( reportingConfig );
 				failureCollector.critical( "Unable to determine handler context for project %s. Was it not configured ?".formatted( project ) );
 				failureCollector.close();
-				return;
+				throw new ConstraintViolationException( "Project " + project + " is not configured.", Set.of() );
 			}
 
 			for ( Runnable handler : eventType.handlers( reportingConfig, event, context ) ) {

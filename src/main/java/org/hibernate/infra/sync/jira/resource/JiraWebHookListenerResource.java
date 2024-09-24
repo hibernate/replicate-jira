@@ -2,6 +2,7 @@ package org.hibernate.infra.sync.jira.resource;
 
 import org.hibernate.infra.sync.jira.service.jira.JiraService;
 import org.hibernate.infra.sync.jira.service.jira.model.hook.JiraWebHookEvent;
+import org.hibernate.infra.sync.jira.service.validation.ConfiguredProject;
 
 import org.jboss.resteasy.reactive.RestPath;
 

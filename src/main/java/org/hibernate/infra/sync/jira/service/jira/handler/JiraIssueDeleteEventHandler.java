@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 
@@ -40,6 +41,7 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 				JiraIssue issue = context.destinationJiraClient().getIssue( destinationKey );
 				JiraIssue updated = new JiraIssue();
 
+				updated.fields = new JiraFields();
 				updated.fields.summary = "DELETED upstream: " + issue.fields.summary;
 				if ( issue.fields.labels == null ) {
 					issue.fields.labels = List.of();
