@@ -2,6 +2,7 @@ package org.hibernate.infra.sync.jira.service.jira;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -29,7 +30,10 @@ import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.scheduler.Scheduler;
+import io.quarkus.vertx.http.ManagementInterface;
+import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
 
@@ -43,11 +47,7 @@ public class JiraService {
 
 	@Inject
 	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
-		executor = new ThreadPoolExecutor(
-				processingConfig.threads(), processingConfig.threads(),
-				0L, TimeUnit.MILLISECONDS,
-				new LinkedBlockingDeque<>( processingConfig.queueSize() )
-		);
+		executor = new ThreadPoolExecutor( processingConfig.threads(), processingConfig.threads(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>( processingConfig.queueSize() ) );
 
 		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
 		for ( var entry : jiraConfig.projectGroup().entrySet() ) {
@@ -55,12 +55,7 @@ public class JiraService {
 			JiraRestClient destination = JiraRestClientBuilder.of( entry.getValue().destination() );
 
 			for ( var project : entry.getValue().projects().entrySet() ) {
-				contextMap.put( project.getKey(), new HandlerProjectContext(
-						project.getKey(),
-						entry.getKey(),
-						source, destination,
-						entry.getValue()
-				) );
+				contextMap.put( project.getKey(), new HandlerProjectContext( project.getKey(), entry.getKey(), source, destination, entry.getValue() ) );
 			}
 		}
 
@@ -73,14 +68,58 @@ public class JiraService {
 
 	private void configureScheduledTasks(Scheduler scheduler, JiraConfig jiraConfig) {
 		for ( var entry : jiraConfig.projectGroup().entrySet() ) {
-			scheduler.newJob( "Sync project group %s".formatted( entry.getKey() ) )
-					.setCron( entry.getValue().scheduled().cron() )
-					.setConcurrentExecution( Scheduled.ConcurrentExecution.SKIP )
-					.setTask( executionContext -> {
-						syncLastUpdated( entry.getKey() );
-					} )
-					.schedule();
+			scheduler.newJob( "Sync project group %s".formatted( entry.getKey() ) ).setCron( entry.getValue().scheduled().cron() ).setConcurrentExecution( Scheduled.ConcurrentExecution.SKIP ).setTask( executionContext -> {
+				syncLastUpdated( entry.getKey() );
+			} ).schedule();
 		}
+	}
+
+	public void registerManagementRoutes(@Observes ManagementInterface mi) {
+		mi.router().post( "/sync/issues/list" ).handler( rc -> {
+			JsonObject request = rc.body().asJsonObject();
+			String project = request.getString( "project" );
+			List<String> issueKeys = request.getJsonArray( "issues" ).stream().map( Objects::toString ).toList();
+
+			HandlerProjectContext context = contextPerProject.get( project );
+
+			if ( context == null ) {
+				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			}
+
+			executor.submit( () -> {
+				for ( String issueKey : issueKeys ) {
+					triggerSyncEvent( context.sourceJiraClient().getIssue( issueKey ) );
+				}
+			} );
+		} );
+		mi.router().post( "/sync/issues/query" ).handler( rc -> {
+			JsonObject request = rc.body().asJsonObject();
+			String project = request.getString( "project" );
+			String query = request.getString( "query" );
+
+			HandlerProjectContext context = contextPerProject.get( project );
+
+			if ( context == null ) {
+				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			}
+
+			executor.submit( () -> syncByQuery( query, context ) );
+		} );
+		mi.router().post( "/sync/comments/list" ).handler( rc -> {
+			JsonObject request = rc.body().asJsonObject();
+			String project = request.getString( "project" );
+			List<JiraComment> comments = request.getJsonArray( "comments" ).stream().map( Objects::toString )
+					.map( JiraComment::new ).toList();
+
+			HandlerProjectContext context = contextPerProject.get( project );
+
+			if ( context == null ) {
+				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			}
+
+			// can trigger directly as we do not make any REST requests here:
+			triggerCommentSyncEvents( project, comments );
+		} );
 	}
 
 	/**
@@ -117,32 +156,31 @@ public class JiraService {
 				Log.infof( "Generating issues for %s project.", project );
 				HandlerProjectContext context = contextPerProject.get( project );
 
-				String query = "project=%s and updated >= %s ORDER BY key".formatted(
-						context.project().originalProjectKey(),
-						context.projectGroup().scheduled().timeFilter()
-				);
-
-				JiraIssues issues = null;
-				int start = 0;
-				int max = 100;
-				do {
-					try {
-						issues = context.sourceJiraClient().find( query, start, max );
-						issues.issues.forEach( this::triggerSyncEvent );
-					}
-					catch (Exception e) {
-						failureCollector.warning( "Failed to fetch issues for a query '%s': %s".formatted( query, e.getMessage() ), e );
-						break;
-					}
-
-					start += max;
-				} while ( !issues.issues.isEmpty() );
+				String query = "project=%s and updated >= %s ORDER BY key".formatted( context.project().originalProjectKey(), context.projectGroup().scheduled().timeFilter() );
+				try {
+					syncByQuery( query, context );
+				}
+				catch (Exception e) {
+					failureCollector.warning( "Failed to fetch issues for a query '%s': %s".formatted( query, e.getMessage() ), e );
+					break;
+				}
 			}
-
 		}
 		finally {
 			Log.info( "Finished scheduled sync of issues" );
 		}
+	}
+
+	private void syncByQuery(String query, HandlerProjectContext context) {
+		JiraIssues issues = null;
+		int start = 0;
+		int max = 100;
+		do {
+			issues = context.sourceJiraClient().find( query, start, max );
+			issues.issues.forEach( this::triggerSyncEvent );
+
+			start += max;
+		} while ( !issues.issues.isEmpty() );
 	}
 
 	private void triggerSyncEvent(JiraIssue jiraIssue) {
@@ -157,13 +195,7 @@ public class JiraService {
 
 		// now sync comments:
 		if ( jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null ) {
-			for ( JiraComment comment : jiraIssue.fields.comment.comments ) {
-				event = new JiraWebHookEvent();
-				event.comment = new JiraWebHookObject();
-				event.comment.id = Long.parseLong( comment.id );
-				event.webhookEvent = JiraWebhookEventType.COMMENT_UPDATED.getName();
-				acknowledge( projectKey, event );
-			}
+			triggerCommentSyncEvents( projectKey, jiraIssue.fields.comment.comments );
 		}
 
 		// and links:
@@ -177,6 +209,15 @@ public class JiraService {
 				acknowledge( projectKey, event );
 			}
 		}
+	}
 
+	private void triggerCommentSyncEvents(String projectKey, List<JiraComment> comments) {
+		for ( JiraComment comment : comments ) {
+			var event = new JiraWebHookEvent();
+			event.comment = new JiraWebHookObject();
+			event.comment.id = Long.parseLong( comment.id );
+			event.webhookEvent = JiraWebhookEventType.COMMENT_UPDATED.getName();
+			acknowledge( projectKey, event );
+		}
 	}
 }

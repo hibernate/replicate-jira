@@ -11,4 +11,10 @@ public class JiraComment extends JiraBaseObject {
 	public JiraUser author = new JiraUser();
 	public String body;
 
+	public JiraComment() {
+	}
+
+	public JiraComment(String id) {
+		this.id = id;
+	}
 }
