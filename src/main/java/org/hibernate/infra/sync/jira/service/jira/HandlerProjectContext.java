@@ -1,5 +1,6 @@
 package org.hibernate.infra.sync.jira.service.jira;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,6 +16,7 @@ public final class HandlerProjectContext {
 
 	// JIRA REST API creates upto 50 issues at a time: https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-bulk-post
 	private static final int ISSUES_PER_REQUEST = 25;
+	private static final String SYNC_ISSUE_PLACEHOLDER_SUMMARY = "Sync issue placeholder";
 	private final ReentrantLock lock = new ReentrantLock();
 
 	private final String projectName;
@@ -27,8 +29,7 @@ public final class HandlerProjectContext {
 	private final JiraIssueBulk bulk;
 
 	public HandlerProjectContext(
-			String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
-			JiraRestClient destinationJiraClient, JiraConfig.JiraProjectGroup projectGroup
+			String projectName, String projectGroupName, JiraRestClient sourceJiraClient, JiraRestClient destinationJiraClient, JiraConfig.JiraProjectGroup projectGroup
 	) {
 		this.projectName = projectName;
 		this.projectGroupName = projectGroupName;
@@ -68,13 +69,39 @@ public final class HandlerProjectContext {
 		return currentIssueKeyNumber;
 	}
 
-	private Long getCurrentLatestJiraIssueKeyNumber() {
-		JiraIssues issues = destinationJiraClient.find( "project = " + project.projectId() + " ORDER BY created DESC", 0, 1 );
+	public Long getLargestSyncedJiraIssueKeyNumber() {
+		JiraIssues issues = destinationJiraClient.find( "project = %s and summary !~\"%s\" ORDER BY key DESC".formatted( project.projectId(), SYNC_ISSUE_PLACEHOLDER_SUMMARY ), 0, 1 );
 		if ( issues.issues.isEmpty() ) {
 			return 0L;
 		}
 		else {
 			return JiraIssue.keyToLong( issues.issues.get( 0 ).key );
+		}
+	}
+
+	public Optional<JiraIssue> getNextIssueToSync(Long latestSyncedJiraIssueKeyNumber) {
+		JiraIssues issues = destinationJiraClient.find( "project = %s and key > %s-%s ORDER BY key ASC"
+				.formatted( project.originalProjectKey(), project.originalProjectKey(), latestSyncedJiraIssueKeyNumber ), 0, 1 );
+		if ( issues.issues.isEmpty() ) {
+			return Optional.empty();
+		}
+		else {
+			return Optional.of( issues.issues.get( 0 ) );
+		}
+	}
+
+	private Long getCurrentLatestJiraIssueKeyNumber() {
+		try {
+			JiraIssues issues = destinationJiraClient.find( "project = %s ORDER BY created DESC".formatted( project.projectId() ), 0, 1 );
+			if ( issues.issues.isEmpty() ) {
+				return 0L;
+			}
+			else {
+				return JiraIssue.keyToLong( issues.issues.get( 0 ).key );
+			}
+		}
+		catch (Exception e) {
+			return -1L;
 		}
 	}
 
@@ -93,10 +120,7 @@ public final class HandlerProjectContext {
 		try {
 			do {
 				JiraIssueBulkResponse response = destinationJiraClient.create( bulk );
-				response.issues.stream()
-						.mapToLong( i -> JiraIssue.keyToLong( i.key ) )
-						.max()
-						.ifPresent( currentIssueKeyNumber::set );
+				response.issues.stream().mapToLong( i -> JiraIssue.keyToLong( i.key ) ).max().ifPresent( currentIssueKeyNumber::set );
 			} while ( currentIssueKeyNumber.get() < upToKeyNumber );
 		}
 		finally {
@@ -111,7 +135,7 @@ public final class HandlerProjectContext {
 	private JiraIssue createIssuePlaceholder() {
 		JiraIssue placeholder = new JiraIssue();
 		placeholder.fields = new JiraFields();
-		placeholder.fields.summary = "Sync issue placeholder";
+		placeholder.fields.summary = SYNC_ISSUE_PLACEHOLDER_SUMMARY;
 
 		placeholder.fields.description = "This is a placeholder issue. It will be updated at a later point in time. DO NOT EDIT.";
 
@@ -129,13 +153,7 @@ public final class HandlerProjectContext {
 
 	@Override
 	public String toString() {
-		return "HandlerProjectContext[" +
-				"projectName=" + projectName + ", " +
-				"projectGroupName=" + projectGroupName + ", " +
-				"sourceJiraClient=" + sourceJiraClient + ", " +
-				"destinationJiraClient=" + destinationJiraClient + ", " +
-				"projectGroup=" + projectGroup + ", " +
-				"currentIssueKeyNumber=" + currentIssueKeyNumber + ']';
+		return "HandlerProjectContext[" + "projectName=" + projectName + ", " + "projectGroupName=" + projectGroupName + ", " + "sourceJiraClient=" + sourceJiraClient + ", " + "destinationJiraClient=" + destinationJiraClient + ", " + "projectGroup=" + projectGroup + ", " + "currentIssueKeyNumber=" + currentIssueKeyNumber + ']';
 	}
 
 }
