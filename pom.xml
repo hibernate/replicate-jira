@@ -167,13 +167,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>atlassian-public</id>
-            <url>https://packages.atlassian.com/maven/repository/public</url>
-        </repository>
-    </repositories>
-
     <profiles>
         <profile>
             <id>native</id>
