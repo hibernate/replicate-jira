@@ -148,11 +148,10 @@ class IssueTest {
 
 			// we expect that
 			//   - we looked an issue link first
-			//   - then we looked up both sides of the link
+			//   - then we looked up one sides of the link to get the issue and see if there is already a link like that created.
 			//   - and then created an issue link:
 			Mockito.verify( source, Mockito.times( 1 ) ).getIssueLink( eq( 1L ) );
 			Mockito.verify( destination, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST2-1" ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST2-7" ) );
 			Mockito.verify( destination, Mockito.times( 1 ) ).upsertIssueLink( any() );
 		}
 		finally {

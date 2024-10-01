@@ -11,6 +11,10 @@ public class JiraIssue extends JiraBaseObject {
 	public JiraFields fields;
 	public JiraIssueTransition transition;
 
+	public static Long keyToLong(String key) {
+		return Long.parseLong( key.substring( key.lastIndexOf( '-' ) + 1 ) );
+	}
+
 	@Override
 	public String toString() {
 		return "JiraIssue{"

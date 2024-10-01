@@ -9,11 +9,8 @@ import java.util.regex.Pattern;
 
 import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
-import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.sync.jira.service.reporting.FailureCollector;
@@ -22,7 +19,6 @@ import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 import jakarta.ws.rs.core.UriBuilder;
 
 public abstract class JiraEventHandler implements Runnable {
-	private static final int MAX_ATTEMPTS = 20;
 
 	protected final Long objectId;
 	protected final FailureCollector failureCollector;
@@ -167,67 +163,10 @@ public abstract class JiraEventHandler implements Runnable {
 
 	protected abstract void doRun();
 
-	protected JiraIssue getDestinationIssue(String key) {
-		Optional<JiraIssue> jiraIssue = find( key );
-
-		int attempt = 0;
-		while ( jiraIssue.isEmpty() && attempt < MAX_ATTEMPTS ) {
-			// try creating placeholders until we create enough so that the key is available,
-			// but no more than some limit
-			jiraIssue = createIssuePlaceholder( key );
-			attempt++;
-		}
-		return jiraIssue.orElseThrow( () -> new JiraRestException( "Unable to create the placeholder for the %s in %d attempt(s).".formatted( key, MAX_ATTEMPTS ), 500 ) );
-	}
-
-	private Optional<JiraIssue> find(String key) {
-		try {
-			return Optional.of( context.destinationJiraClient().getIssue( key ) );
-		}
-		catch (JiraRestException e) {
-			return Optional.empty();
-		}
-	}
-
-	private Long keyToLong(String key) {
-		return Long.parseLong( key.substring( key.lastIndexOf( '-' ) + 1 ) );
-	}
-
 	protected String toDestinationKey(String key) {
 		if ( keyToUpdatePattern.matcher( key ).matches() ) {
-			return "%s-%d".formatted( context.project().projectKey(), keyToLong( key ) );
+			return "%s-%d".formatted( context.project().projectKey(), JiraIssue.keyToLong( key ) );
 		}
 		return key;
-	}
-
-	private Optional<JiraIssue> createIssuePlaceholder(String expectedKey) {
-		JiraIssue placeholder = new JiraIssue();
-		placeholder.fields = new JiraFields();
-		placeholder.fields.summary = "Sync issue placeholder";
-
-		placeholder.fields.description = "This is a placeholder issue. It will be updated at a later point in time. DO NOT EDIT.";
-
-		placeholder.fields.project.id = context.project().projectId();
-		placeholder.fields.issuetype.id = context.projectGroup().issueTypes().defaultValue();
-
-		// just to be sure that these are not sent as part of
-		//  the placeholder request to keep it as simple as it can be:
-		placeholder.fields.reporter = null;
-		placeholder.fields.assignee = null;
-		placeholder.fields.priority = null;
-
-		try {
-			// TODO: consider using the bulk api to create multiple issues at a time,
-			//  we'd need them later anyways, so maybe worth not doing it one at a time but 5-10?
-			JiraIssueResponse issueResponse = context.destinationJiraClient().create( placeholder );
-			if ( keyToLong( issueResponse.key ) >= keyToLong( expectedKey ) ) {
-				return Optional.of( context.destinationJiraClient().getIssue( expectedKey ) );
-			}
-		}
-		catch (JiraRestException e) {
-			failureCollector.warning( "Failed creating an issue placeholder: %s".formatted( e.getMessage() ), e );
-		}
-
-		return Optional.empty();
 	}
 }

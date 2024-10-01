@@ -39,7 +39,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		String destinationKey = toDestinationKey( sourceIssue.key );
 		// We don't really need one, but doing so means that we will create the placeholder for it
 		// if the issue wasn't already present in the destination Jira instance
-		JiraIssue destinationIssue = getDestinationIssue( destinationKey );
+		context.createNextPlaceholderBatch( destinationKey );
 
 		try {
 			context.destinationJiraClient().update( destinationKey, issueToCreate( sourceIssue ) );
@@ -125,7 +125,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		if ( sourceIssue.fields.parent != null ) {
 			String parent = toDestinationKey( sourceIssue.fields.parent.key );
 			// we don't really need it, but as usual we are making sure that the issue is available downstream:
-			JiraIssue parentIssue = getDestinationIssue( parent );
+			context.createNextPlaceholderBatch( parent );
 			JiraIssueLink link = new JiraIssueLink();
 			link.type.id = context.projectGroup().issueLinkTypes().parentLinkType();
 			//  "name": "Depend",
