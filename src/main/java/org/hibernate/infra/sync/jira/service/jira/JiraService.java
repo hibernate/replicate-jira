@@ -5,11 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.ProcessingConfig;
@@ -36,6 +38,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.ws.rs.core.MediaType;
 
 @ApplicationScoped
 public class JiraService {
@@ -44,6 +47,7 @@ public class JiraService {
 	private final ExecutorService executor;
 	private final Map<String, HandlerProjectContext> contextPerProject;
 	private final JiraConfig jiraConfig;
+	private final Scheduler scheduler;
 
 	@Inject
 	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
@@ -64,6 +68,7 @@ public class JiraService {
 
 		configureScheduledTasks( scheduler, jiraConfig );
 		this.jiraConfig = jiraConfig;
+		this.scheduler = scheduler;
 	}
 
 	private void configureScheduledTasks(Scheduler scheduler, JiraConfig jiraConfig) {
@@ -75,7 +80,38 @@ public class JiraService {
 	}
 
 	public void registerManagementRoutes(@Observes ManagementInterface mi) {
-		mi.router().post( "/sync/issues/list" ).handler( rc -> {
+		mi.router().get( "/sync/issues/init" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+			JsonObject request = rc.body().asJsonObject();
+			String project = request.getString( "project" );
+
+			HandlerProjectContext context = contextPerProject.get( project );
+
+			if ( context == null ) {
+				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			}
+
+			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong( context.getLargestSyncedJiraIssueKeyNumber() );
+
+			String identity = "Init Sync for project %s".formatted( project );
+			scheduler.newJob( identity )
+					.setConcurrentExecution( Scheduled.ConcurrentExecution.SKIP )
+					// every 10 seconds:
+					.setCron( "0/10 * * * * ?" )
+					.setTask( executionContext -> {
+						Optional<JiraIssue> issueToSync = context.getNextIssueToSync( largestSyncedJiraIssueKeyNumber.get() );
+						if ( issueToSync.isEmpty() ) {
+							scheduler.unscheduleJob( identity );
+						}
+						else {
+							triggerSyncEvent( issueToSync.get() );
+							largestSyncedJiraIssueKeyNumber.set( JiraIssue.keyToLong( issueToSync.get().key ) );
+						}
+					} )
+					.schedule();
+			rc.end();
+		} );
+		mi.router().post( "/sync/issues/list" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+			// sync issues based on a list of issue-keys supplied in the JSON body:
 			JsonObject request = rc.body().asJsonObject();
 			String project = request.getString( "project" );
 			List<String> issueKeys = request.getJsonArray( "issues" ).stream().map( Objects::toString ).toList();
@@ -91,8 +127,9 @@ public class JiraService {
 					triggerSyncEvent( context.sourceJiraClient().getIssue( issueKey ) );
 				}
 			} );
+			rc.end();
 		} );
-		mi.router().post( "/sync/issues/query" ).handler( rc -> {
+		mi.router().post( "/sync/issues/query" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
 			JsonObject request = rc.body().asJsonObject();
 			String project = request.getString( "project" );
 			String query = request.getString( "query" );
@@ -104,8 +141,9 @@ public class JiraService {
 			}
 
 			executor.submit( () -> syncByQuery( query, context ) );
+			rc.end();
 		} );
-		mi.router().post( "/sync/comments/list" ).handler( rc -> {
+		mi.router().post( "/sync/comments/list" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
 			JsonObject request = rc.body().asJsonObject();
 			String project = request.getString( "project" );
 			List<JiraComment> comments = request.getJsonArray( "comments" ).stream().map( Objects::toString )
@@ -119,6 +157,7 @@ public class JiraService {
 
 			// can trigger directly as we do not make any REST requests here:
 			triggerCommentSyncEvents( project, comments );
+			rc.end();
 		} );
 	}
 
