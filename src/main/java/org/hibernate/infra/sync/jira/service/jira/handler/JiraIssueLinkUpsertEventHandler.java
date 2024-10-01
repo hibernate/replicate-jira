@@ -27,8 +27,9 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 		// make sure that both sides of the link exist:
 		String outwardIssue = toDestinationKey( sourceLink.outwardIssue.key );
 		String inwardIssue = toDestinationKey( sourceLink.inwardIssue.key );
-		getDestinationIssue( outwardIssue );
-		JiraIssue issue = getDestinationIssue( inwardIssue );
+		context.createNextPlaceholderBatch( outwardIssue );
+		context.createNextPlaceholderBatch( inwardIssue );
+		JiraIssue issue = context.destinationJiraClient().getIssue( inwardIssue );
 
 		if ( issue.fields.issuelinks != null ) {
 			// do we already have this issue link or not ?

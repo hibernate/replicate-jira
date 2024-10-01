@@ -6,6 +6,8 @@ import java.util.List;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComments;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulk;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
@@ -49,6 +51,11 @@ public interface JiraRestClient {
 	@Path("/issue")
 	@Consumes(MediaType.APPLICATION_JSON)
 	JiraIssueResponse create(JiraIssue issue);
+
+	@POST
+	@Path("/issue/bulk")
+	@Consumes(MediaType.APPLICATION_JSON)
+	JiraIssueBulkResponse create(JiraIssueBulk bulk);
 
 	@PUT
 	@Path("/issue/{key}")

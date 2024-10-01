@@ -3,6 +3,7 @@ package org.hibernate.infra.sync.jira.mock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -11,6 +12,8 @@ import org.hibernate.infra.sync.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComments;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulk;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
@@ -31,6 +34,7 @@ public class SampleJiraRestClient implements JiraRestClient {
 
 	public final AtomicReference<String> itemCannotBeFound = new AtomicReference<>( "" );
 	public final AtomicBoolean hasIssueLinks = new AtomicBoolean( true );
+	private final AtomicLong currentIssueKey = new AtomicLong( 0 );
 
 	@Inject
 	ObjectMapper objectMapper;
@@ -56,6 +60,16 @@ public class SampleJiraRestClient implements JiraRestClient {
 		JiraIssueResponse response = new JiraIssueResponse();
 		// we just return a high number as if a lot of issues were already created:
 		response.key = jiraKey( 100L );
+		return response;
+	}
+
+	@Override
+	public JiraIssueBulkResponse create(JiraIssueBulk bulk) {
+		JiraIssueBulkResponse response = new JiraIssueBulkResponse();
+		JiraIssueResponse e1 = new JiraIssueResponse();
+		e1.key = jiraKey( currentIssueKey.addAndGet( bulk.issueUpdates.size() ) );
+		response.issues = List.of( e1 );
+
 		return response;
 	}
 
