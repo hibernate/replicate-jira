@@ -105,8 +105,8 @@ public abstract class JiraEventHandler implements Runnable {
 			}
 
 			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
-			List<JiraSimpleObject> source = context.sourceJiraClient().getStatues().values;
-			List<JiraSimpleObject> destination = context.destinationJiraClient().getStatues().values;
+			List<JiraSimpleObject> source = context.sourceJiraClient().getStatues();
+			List<JiraSimpleObject> destination = context.destinationJiraClient().getStatues();
 
 			return createMapping( source, destination );
 		}, mappedValues.defaultValue() ) );

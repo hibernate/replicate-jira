@@ -139,11 +139,8 @@ public class SampleJiraRestClient implements JiraRestClient {
 	}
 
 	@Override
-	public JiraIssueTypes getStatues() {
-		JiraIssueTypes jiraIssueTypes = new JiraIssueTypes();
-		jiraIssueTypes.values = List.of();
-		jiraIssueTypes.total = 0;
-		return jiraIssueTypes;
+	public List<JiraSimpleObject> getStatues() {
+		return List.of();
 	}
 
 	@Override
