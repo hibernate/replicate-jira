@@ -1,6 +1,7 @@
 package org.hibernate.infra.sync.jira;
 
 import java.net.URI;
+import java.util.Base64;
 import java.util.Map;
 
 import io.smallrye.config.ConfigMapping;
@@ -52,6 +53,9 @@ public interface JiraConfig {
 	}
 
 	interface Instance {
+		@WithDefault("BASIC")
+		LoginKind loginKind();
+
 		JiraUser apiUser();
 
 		URI apiUri();
@@ -80,6 +84,32 @@ public interface JiraConfig {
 		 * task instead and adding an extra link for it.
 		 */
 		String parentLinkType();
+	}
 
+	/**
+	 * Some JIRA instances may allow PAT logins (personal authentication tokens) while others: basic authentication with a username password/token
+	 */
+	enum LoginKind {
+		/**
+		 * Basic authentication with a username password/token. A string {@code username:password} is {@code base64}-encoded and passed in the auth header.
+		 */
+		BASIC {
+			@Override
+			public Map<String, String> headers(String username, String token) {
+				return Map.of( "Authorization", "Basic %s".formatted( Base64.getEncoder().encodeToString( ( "%s:%s".formatted( username, token ) ).getBytes() ) ) );
+			}
+		},
+		/**
+		 * A PAT login, where a JIRA generated token is simply passed as is in the header without any additional encoding, usernames or anything else.
+		 * See also <a href="https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html">personal access tokens</a>
+		 */
+		BEARER_TOKEN {
+			@Override
+			public Map<String, String> headers(String username, String token) {
+				return Map.of( "Authorization", "Bearer %s".formatted( token ) );
+			}
+		};
+
+		public abstract Map<String, String> headers(String username, String token);
 	}
 }
