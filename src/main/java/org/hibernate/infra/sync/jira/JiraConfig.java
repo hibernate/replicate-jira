@@ -17,7 +17,7 @@ public interface JiraConfig {
 
 		Instance destination();
 
-		ValueMapping users();
+		UserValueMapping users();
 
 		ValueMapping priorities();
 
@@ -84,6 +84,15 @@ public interface JiraConfig {
 		 * task instead and adding an extra link for it.
 		 */
 		String parentLinkType();
+	}
+
+	interface UserValueMapping extends ValueMapping {
+		/**
+		 * @return the name of the property to apply the assignee value to.
+		 * With Jira Server the required property is {@code name}, while for the Cloud an {@code accountId} is expected.
+		 */
+		@WithDefault("accountId")
+		String mappedPropertyName();
 	}
 
 	/**
