@@ -102,8 +102,8 @@ public interface JiraRestClient {
 	List<JiraSimpleObject> getIssueTypes();
 
 	@GET
-	@Path("/statuses/search")
-	JiraIssueTypes getStatues();
+	@Path("/status")
+	List<JiraSimpleObject> getStatues();
 
 	@GET
 	@Path("/issueLinkType")

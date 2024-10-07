@@ -133,27 +133,6 @@ class ExportProjectTest {
 		}
 	}
 
-	private Map<String, String> statusIdToName(JiraRestClient destination, JiraConfig.JiraProjectGroup projectGroup) {
-		return mapToName( destination.getStatues().values, projectGroup.statuses().mapping() );
-	}
-
-	private Map<String, String> issueTypeIdToName(JiraRestClient destination, JiraConfig.JiraProjectGroup projectGroup) {
-		return mapToName( destination.getIssueTypes(), projectGroup.issueTypes().mapping() );
-	}
-
-	private Map<String, String> mapToName(List<JiraSimpleObject> values, Map<String, String> mapping) {
-		Map<String, String> result = new HashMap<>();
-		for ( var entry : mapping.entrySet() ) {
-			for ( JiraSimpleObject value : values ) {
-				if ( entry.getValue().equals( value.id ) ) {
-					result.put( entry.getKey(), value.name );
-				}
-			}
-		}
-
-		return result;
-	}
-
 	private List<String> formatLabels(JiraIssue issue) {
 		List<String> labels = new ArrayList<>();
 		if ( issue.fields.labels != null && !issue.fields.labels.isEmpty() ) {
