@@ -95,8 +95,8 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		}
 
 		// if we can map the priority - great we'll do that, if no: we'll keep it blank and let Jira use its default instead:
-		destinationIssue.fields.priority = priority( sourceIssue.fields.priority.id )
-				.map( JiraSimpleObject::new ).orElse( null );
+		destinationIssue.fields.priority = sourceIssue.fields.priority != null ? priority( sourceIssue.fields.priority.id )
+				.map( JiraSimpleObject::new ).orElse( null ) : null;
 
 		destinationIssue.fields.project.id = context.project().projectId();
 
@@ -107,13 +107,17 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		// also the description is going to include a section mentioning who created and who the issue is assigned to...
 		if ( context.projectGroup().canSetReporter() ) {
 			destinationIssue.fields.reporter = user( sourceIssue.fields.reporter )
-					.map( JiraUser::new ).orElse( null );
+					.map( this::toUser ).orElse( null );
 		}
 
 		destinationIssue.fields.assignee = user( sourceIssue.fields.assignee )
-				.map( JiraUser::new ).orElse( null );
+				.map( this::toUser ).orElse( null );
 
 		return destinationIssue;
+	}
+
+	private JiraUser toUser(String value) {
+		return new JiraUser( context.projectGroup().users().mappedPropertyName(), value );
 	}
 
 	private Optional<JiraTransition> prepareTransition(JiraIssue sourceIssue) {
@@ -154,12 +158,12 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 				
 				Assigned to: %s.
 				
-				Reported by: [user %s|%s].{quote}
+				Reported by: %s.{quote}
 				
 				
 				""".formatted( issue.key, issueUri,
 				assigneeUri == null ? " Unassigned" : "[user %s|%s]".formatted( JiraTextContent.userIdPart( issue.fields.assignee ), assigneeUri ),
-				JiraTextContent.userIdPart( issue.fields.reporter ), reporterUri
+				reporterUri == null ? " Unknown" : "[user %s|%s]".formatted( JiraTextContent.userIdPart( issue.fields.reporter ), reporterUri )
 		);
 	}
 
