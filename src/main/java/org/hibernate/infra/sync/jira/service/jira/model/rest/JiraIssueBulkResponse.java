@@ -9,9 +9,6 @@ public class JiraIssueBulkResponse extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "JiraIssueBulkResponse{"
-				+ "issues=" + issues
-				+ ", otherProperties=" + properties()
-				+ '}';
+		return "JiraIssueBulkResponse{" + "issues=" + issues + ", otherProperties=" + properties() + '}';
 	}
 }

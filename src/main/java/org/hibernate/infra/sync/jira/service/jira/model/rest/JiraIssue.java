@@ -12,17 +12,12 @@ public class JiraIssue extends JiraBaseObject {
 	public JiraIssueTransition transition;
 
 	public static Long keyToLong(String key) {
-		return Long.parseLong( key.substring( key.lastIndexOf( '-' ) + 1 ) );
+		return Long.parseLong(key.substring(key.lastIndexOf('-') + 1));
 	}
 
 	@Override
 	public String toString() {
-		return "JiraIssue{"
-				+ "id=" + id
-				+ ", key='" + key + '\''
-				+ ", self=" + self
-				+ ", fields=" + fields
-				+ ", otherProperties=" + properties()
-				+ '}';
+		return "JiraIssue{" + "id=" + id + ", key='" + key + '\'' + ", self=" + self + ", fields=" + fields
+				+ ", otherProperties=" + properties() + '}';
 	}
 }

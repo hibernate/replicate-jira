@@ -7,7 +7,8 @@ import org.eclipse.microprofile.health.Readiness;
 import org.eclipse.microprofile.health.Startup;
 
 /**
- * Since we do not depend on any resources let's just have this simplest check to see if the app is running.
+ * Since we do not depend on any resources let's just have this simplest check
+ * to see if the app is running.
  */
 @Startup
 @Readiness
@@ -17,10 +18,8 @@ public class IsAppRunningCheck implements HealthCheck {
 
 	@Override
 	public HealthCheckResponse call() {
-		return HealthCheckResponse.builder()
-				.name( NAME )
-				.withData( "details", "The app is up and running, and should be able to accept webhook POSTs." )
-				.up()
+		return HealthCheckResponse.builder().name(NAME)
+				.withData("details", "The app is up and running, and should be able to accept webhook POSTs.").up()
 				.build();
 	}
 

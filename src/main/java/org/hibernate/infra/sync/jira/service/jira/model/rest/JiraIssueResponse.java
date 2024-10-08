@@ -11,11 +11,7 @@ public class JiraIssueResponse extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "JiraIssue{"
-				+ "id=" + id
-				+ ", key='" + key + '\''
-				+ ", self=" + self
-				+ ", otherProperties=" + properties()
-				+ '}';
+		return "JiraIssue{" + "id=" + id + ", key='" + key + '\'' + ", self=" + self + ", otherProperties="
+				+ properties() + '}';
 	}
 }

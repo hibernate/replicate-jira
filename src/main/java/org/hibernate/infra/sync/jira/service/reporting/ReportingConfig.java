@@ -19,7 +19,8 @@ public interface ReportingConfig {
 		String token();
 
 		/**
-		 * @return How often to report status on GitHub when the last report was identical and contained only warnings.
+		 * @return How often to report status on GitHub when the last report was
+		 *         identical and contained only warnings.
 		 */
 		Duration warningRepeatDelay();
 
@@ -31,8 +32,6 @@ public interface ReportingConfig {
 	}
 
 	enum Type {
-		LOG,
-		THROW,
-		GITHUB_ISSUE;
+		LOG, THROW, GITHUB_ISSUE;
 	}
 }

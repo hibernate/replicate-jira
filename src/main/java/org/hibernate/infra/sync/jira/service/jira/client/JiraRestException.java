@@ -4,7 +4,7 @@ public class JiraRestException extends RuntimeException {
 	private final int statusCode;
 
 	public JiraRestException(String message, int statusCode) {
-		super( message );
+		super(message);
 		this.statusCode = statusCode;
 	}
 

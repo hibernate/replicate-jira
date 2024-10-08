@@ -17,23 +17,17 @@ public class JiraFields extends JiraBaseObject {
 	public JiraUser assignee;
 	public JiraUser reporter;
 	public List<JiraSimpleObject> fixVersions;
-	// NOTE: this one is for "read-only" purposes, to create links a different API has to be used
+	// NOTE: this one is for "read-only" purposes, to create links a different API
+	// has to be used
 	public List<JiraIssueLink> issuelinks;
 	public JiraComments comment;
 	public JiraIssue parent;
 
-
 	@Override
 	public String toString() {
-		return "JiraFields{"
-				+ "summary='" + summary + '\''
-				+ ", description=" + description
-				+ ", priority=" + priority
-				+ ", issuetype=" + issuetype
-				+ ", project=" + project
-				+ ", labels=" + labels
-				+ "otherProperties=" + properties()
-				+ '}';
+		return "JiraFields{" + "summary='" + summary + '\'' + ", description=" + description + ", priority=" + priority
+				+ ", issuetype=" + issuetype + ", project=" + project + ", labels=" + labels + "otherProperties="
+				+ properties() + '}';
 	}
 
 }

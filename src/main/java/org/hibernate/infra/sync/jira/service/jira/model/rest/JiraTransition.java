@@ -14,21 +14,18 @@ public class JiraTransition extends JiraBaseObject {
 	}
 
 	public JiraTransition(String transitionId, String comment) {
-		transition = new JiraIssueTransition( transitionId );
-		if ( comment != null && !comment.isBlank() ) {
+		transition = new JiraIssueTransition(transitionId);
+		if (comment != null && !comment.isBlank()) {
 			update = new JiraUpdate();
 			JiraBaseObject c = new JiraBaseObject();
-			update.comment.add( c );
-			c.properties().put( "add", Map.of( "body", comment ) );
+			update.comment.add(c);
+			c.properties().put("add", Map.of("body", comment));
 		}
 	}
 
 	@Override
 	public String toString() {
-		return "JiraIssue{"
-				+ "transition=" + transition
-				+ ", update=" + update
-				+ ", otherProperties=" + properties()
+		return "JiraIssue{" + "transition=" + transition + ", update=" + update + ", otherProperties=" + properties()
 				+ '}';
 	}
 

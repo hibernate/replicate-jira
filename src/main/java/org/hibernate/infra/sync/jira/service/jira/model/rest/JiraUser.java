@@ -15,11 +15,10 @@ public class JiraUser extends JiraBaseObject {
 	}
 
 	public JiraUser(String propertyName, String value) {
-		if ( "accountId".equals( propertyName ) ) {
+		if ("accountId".equals(propertyName)) {
 			this.accountId = value;
-		}
-		else {
-			properties().put( propertyName, value );
+		} else {
+			properties().put(propertyName, value);
 		}
 	}
 }
