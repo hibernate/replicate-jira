@@ -4,9 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.hibernate.infra.sync.jira</groupId>
     <artifactId>hibernate-jira-sync</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${revision}</version>
 
     <properties>
+        <revision>999-SNAPSHOT</revision>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -80,6 +81,16 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+
+        <!-- Deploy -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-openshift</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-container-image-jib</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
