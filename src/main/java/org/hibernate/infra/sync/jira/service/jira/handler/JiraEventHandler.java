@@ -27,120 +27,117 @@ public abstract class JiraEventHandler implements Runnable {
 
 	protected JiraEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
 		this.objectId = id;
-		this.failureCollector = FailureCollector.collector( reportingConfig );
+		this.failureCollector = FailureCollector.collector(reportingConfig);
 		this.context = context;
-		this.keyToUpdatePattern = Pattern.compile( "^%s-\\d+".formatted( context.project().originalProjectKey() ) );
+		this.keyToUpdatePattern = Pattern.compile("^%s-\\d+".formatted(context.project().originalProjectKey()));
 	}
 
 	protected static URI createJiraIssueUri(JiraIssue sourceIssue) {
 		// e.g. https://hibernate.atlassian.net/browse/JIRATEST1-1
-		return UriBuilder.fromUri( sourceIssue.self )
-				.replacePath( "browse" )
-				.path( sourceIssue.key )
-				.build();
+		return UriBuilder.fromUri(sourceIssue.self).replacePath("browse").path(sourceIssue.key).build();
 	}
 
 	protected static URI createJiraCommentUri(JiraIssue issue, JiraComment comment) {
-		// e.g. https://hibernate.atlassian.net/browse/JIRATEST1-1?focusedCommentId=116651
-		return UriBuilder.fromUri( issue.self )
-				.replacePath( "browse" )
-				.path( issue.key )
-				.replaceQuery( "" )
-				.queryParam( "focusedCommentId", comment.id )
-				.build();
+		// e.g.
+		// https://hibernate.atlassian.net/browse/JIRATEST1-1?focusedCommentId=116651
+		return UriBuilder.fromUri(issue.self).replacePath("browse").path(issue.key).replaceQuery("")
+				.queryParam("focusedCommentId", comment.id).build();
 	}
 
 	protected static URI createJiraUserUri(URI someJiraUri, JiraUser user) {
-		// e.g. https://hibernate.atlassian.net/jira/people/557058:18cf44bb-bc9b-4e8d-b1b7-882969ddc8e5
-		if ( user == null ) {
+		// e.g.
+		// https://hibernate.atlassian.net/jira/people/557058:18cf44bb-bc9b-4e8d-b1b7-882969ddc8e5
+		if (user == null) {
 			return null;
 		}
-		return UriBuilder.fromUri( someJiraUri )
-				.replacePath( "jira" )
-				.path( "people" )
-				.path( user.accountId )
-				.build();
+		return UriBuilder.fromUri(someJiraUri).replacePath("jira").path("people").path(user.accountId).build();
 	}
 
 	protected Optional<String> priority(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().priorities();
-		return Optional.ofNullable( JiraStaticFieldMappingCache.priority( context.projectGroupName(), sourceId, pk -> {
+		return Optional.ofNullable(JiraStaticFieldMappingCache.priority(context.projectGroupName(), sourceId, pk -> {
 			Map<String, String> mapping = mappedValues.mapping();
-			if ( !mapping.isEmpty() ) {
+			if (!mapping.isEmpty()) {
 				return mapping;
 			}
 
-			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
+			// Otherwise we'll try to use REST to get the info and match, but that may not
+			// necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getPriorities();
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getPriorities();
 
-			return createMapping( source, destination );
-		}, mappedValues.defaultValue() ) );
+			return createMapping(source, destination);
+		}, mappedValues.defaultValue()));
 	}
 
 	protected Optional<String> issueType(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().issueTypes();
-		return Optional.ofNullable( JiraStaticFieldMappingCache.issueType( context.projectGroupName(), sourceId, pk -> {
+		return Optional.ofNullable(JiraStaticFieldMappingCache.issueType(context.projectGroupName(), sourceId, pk -> {
 
 			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
-			if ( !mapping.isEmpty() ) {
+			if (!mapping.isEmpty()) {
 				return mapping;
 			}
 
-			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
+			// Otherwise we'll try to use REST to get the info and match, but that may not
+			// necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getIssueTypes();
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getIssueTypes();
 
-			return createMapping( source, destination );
+			return createMapping(source, destination);
 
-		}, mappedValues.defaultValue() ) );
+		}, mappedValues.defaultValue()));
 	}
 
 	protected Optional<String> statusToTransition(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().statuses();
-		return Optional.ofNullable( JiraStaticFieldMappingCache.status( context.projectGroupName(), sourceId, pk -> {
+		return Optional.ofNullable(JiraStaticFieldMappingCache.status(context.projectGroupName(), sourceId, pk -> {
 			Map<String, String> mapping = context.projectGroup().statuses().mapping();
-			if ( !mapping.isEmpty() ) {
+			if (!mapping.isEmpty()) {
 				return mapping;
 			}
 
-			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
+			// Otherwise we'll try to use REST to get the info and match, but that may not
+			// necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getStatues();
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getStatues();
 
-			return createMapping( source, destination );
-		}, mappedValues.defaultValue() ) );
+			return createMapping(source, destination);
+		}, mappedValues.defaultValue()));
 	}
 
 	protected Optional<String> linkType(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().issueLinkTypes();
-		return Optional.ofNullable( JiraStaticFieldMappingCache.linkType( context.projectGroupName(), sourceId, pk -> {
+		return Optional.ofNullable(JiraStaticFieldMappingCache.linkType(context.projectGroupName(), sourceId, pk -> {
 			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
-			if ( !mapping.isEmpty() ) {
+			if (!mapping.isEmpty()) {
 				return mapping;
 			}
 
-			// Otherwise we'll try to use REST to get the info and match, but that may not necessarily work fine
+			// Otherwise we'll try to use REST to get the info and match, but that may not
+			// necessarily work fine
 			List<JiraSimpleObject> source = context.sourceJiraClient().getIssueLinkTypes().issueLinkTypes;
 			List<JiraSimpleObject> destination = context.destinationJiraClient().getIssueLinkTypes().issueLinkTypes;
 
-			return createMapping( source, destination );
-		}, mappedValues.defaultValue() ) );
+			return createMapping(source, destination);
+		}, mappedValues.defaultValue()));
 	}
 
 	protected Optional<String> user(JiraUser sourceUser) {
-		if ( sourceUser == null ) {
+		if (sourceUser == null) {
 			return Optional.empty();
 		}
-		return Optional.ofNullable( JiraStaticFieldMappingCache.user( context.projectGroupName(), sourceUser.accountId, userId -> context.projectGroup().users().mapping().get( sourceUser.accountId ) ) );
+		return Optional.ofNullable(JiraStaticFieldMappingCache.user(context.projectGroupName(), sourceUser.accountId,
+				userId -> context.projectGroup().users().mapping().get(sourceUser.accountId)));
 	}
 
-	private static Map<String, String> createMapping(List<JiraSimpleObject> source, List<JiraSimpleObject> destination) {
+	private static Map<String, String> createMapping(List<JiraSimpleObject> source,
+			List<JiraSimpleObject> destination) {
 		Map<String, String> mapping = new HashMap<>();
-		for ( JiraSimpleObject p : source ) {
-			for ( JiraSimpleObject d : destination ) {
-				if ( p.name.equals( d.name ) ) {
-					mapping.put( p.id, d.id );
+		for (JiraSimpleObject p : source) {
+			for (JiraSimpleObject d : destination) {
+				if (p.name.equals(d.name)) {
+					mapping.put(p.id, d.id);
 					break;
 				}
 			}
@@ -152,11 +149,9 @@ public abstract class JiraEventHandler implements Runnable {
 	public final void run() {
 		try {
 			doRun();
-		}
-		catch (RuntimeException e) {
-			failureCollector.critical( "Failed to handled the event", e );
-		}
-		finally {
+		} catch (RuntimeException e) {
+			failureCollector.critical("Failed to handled the event", e);
+		} finally {
 			failureCollector.close();
 		}
 	}
@@ -164,8 +159,8 @@ public abstract class JiraEventHandler implements Runnable {
 	protected abstract void doRun();
 
 	protected String toDestinationKey(String key) {
-		if ( keyToUpdatePattern.matcher( key ).matches() ) {
-			return "%s-%d".formatted( context.project().projectKey(), JiraIssue.keyToLong( key ) );
+		if (keyToUpdatePattern.matcher(key).matches()) {
+			return "%s-%d".formatted(context.project().projectKey(), JiraIssue.keyToLong(key));
 		}
 		return key;
 	}

@@ -11,17 +11,16 @@ public class JiraRestClientBuilder {
 	public static JiraRestClient of(JiraConfig.Instance jira) {
 		JiraConfig.JiraUser jiraUser = jira.apiUser();
 
-		Map<String, String> headers = jira.loginKind().headers( jiraUser.email(), jiraUser.token() );
+		Map<String, String> headers = jira.loginKind().headers(jiraUser.email(), jiraUser.token());
 
-		return QuarkusRestClientBuilder.newBuilder()
-				.baseUri( jira.apiUri() )
-				// TODO: Add a custom client logger that cleans up auth headers so that we do not write any secrets to the logs ...
-				.clientHeadersFactory( (incomingHeaders, clientOutgoingHeaders) -> {
-					for ( var entry : headers.entrySet() ) {
-						clientOutgoingHeaders.add( entry.getKey(), entry.getValue() );
+		return QuarkusRestClientBuilder.newBuilder().baseUri(jira.apiUri())
+				// TODO: Add a custom client logger that cleans up auth headers so that we do
+				// not write any secrets to the logs ...
+				.clientHeadersFactory((incomingHeaders, clientOutgoingHeaders) -> {
+					for (var entry : headers.entrySet()) {
+						clientOutgoingHeaders.add(entry.getKey(), entry.getValue());
 					}
 					return clientOutgoingHeaders;
-				} )
-				.build( JiraRestClient.class );
+				}).build(JiraRestClient.class);
 	}
 }

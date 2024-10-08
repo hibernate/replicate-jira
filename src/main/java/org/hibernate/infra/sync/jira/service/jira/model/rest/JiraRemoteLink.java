@@ -12,13 +12,8 @@ public class JiraRemoteLink extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "JiraRemoteLink{" +
-				"globalId='" + globalId + '\''
-				+ ", self=" + self
-				+ ", relationship='" + relationship + '\''
-				+ ", object=" + object
-				+ ", otherProperties=" + properties()
-				+ '}';
+		return "JiraRemoteLink{" + "globalId='" + globalId + '\'' + ", self=" + self + ", relationship='" + relationship
+				+ '\'' + ", object=" + object + ", otherProperties=" + properties() + '}';
 	}
 
 	public static class LinkObject extends JiraBaseObject {
@@ -28,11 +23,7 @@ public class JiraRemoteLink extends JiraBaseObject {
 
 		@Override
 		public String toString() {
-			return "LinkObject{" +
-					"summary='" + summary + '\''
-					+ ", title='" + title + '\''
-					+ ", url=" + url
-					+ '}';
+			return "LinkObject{" + "summary='" + summary + '\'' + ", title='" + title + '\'' + ", url=" + url + '}';
 		}
 	}
 }

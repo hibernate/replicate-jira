@@ -7,7 +7,8 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
 public class JiraBaseObject {
-	// for any other properties that we don't really care about, but ... just in case we want to check something while debugging:
+	// for any other properties that we don't really care about, but ... just in
+	// case we want to check something while debugging:
 	@JsonAnyGetter
 	@JsonAnySetter
 	private Map<String, Object> properties = new HashMap<>();

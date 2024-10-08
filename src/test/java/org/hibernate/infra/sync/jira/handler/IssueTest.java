@@ -43,80 +43,80 @@ class IssueTest {
 
 	@BeforeEach
 	void setUp() {
-		context = new HandlerProjectContext(
-				"JIRATEST1", PROJECT_GROUP_NAME, source, destination, jiraConfig.projectGroup().get( PROJECT_GROUP_NAME )
-		);
+		context = new HandlerProjectContext("JIRATEST1", PROJECT_GROUP_NAME, source, destination,
+				jiraConfig.projectGroup().get(PROJECT_GROUP_NAME));
 	}
 
 	@Test
 	void testUpsert() {
 		long issueId = 1L;
-		new JiraIssueUpsertEventHandler( reportingConfig, context, issueId ).run();
+		new JiraIssueUpsertEventHandler(reportingConfig, context, issueId).run();
 
 		// we expect that
-		//   - the downstream issue is updated,
-		//   - web link added pointing to the issue
-		//   - transition is performed
-		Mockito.verify( destination, Mockito.times( 1 ) ).update( eq( "JIRATEST2-1" ), any() );
-		Mockito.verify( destination, Mockito.times( 1 ) ).upsertRemoteLink( eq( "JIRATEST2-1" ), any() );
-		Mockito.verify( destination, Mockito.times( 1 ) ).transition( eq( "JIRATEST2-1" ), any() );
+		// - the downstream issue is updated,
+		// - web link added pointing to the issue
+		// - transition is performed
+		Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any());
+		Mockito.verify(destination, Mockito.times(1)).upsertRemoteLink(eq("JIRATEST2-1"), any());
+		Mockito.verify(destination, Mockito.times(1)).transition(eq("JIRATEST2-1"), any());
 	}
 
 	@Test
 	void testRemoveExisting() {
 		long issueId = 1L;
 		String key = "JIRATEST1-1";
-		assertThatThrownBy( () -> new JiraIssueDeleteEventHandler( reportingConfig, context, issueId, key ).run() )
-				.isInstanceOf( RuntimeException.class )
-				.hasMessageContaining( "Request to delete an issue JIRATEST1-1 that is actually not deleted" );
+		assertThatThrownBy(() -> new JiraIssueDeleteEventHandler(reportingConfig, context, issueId, key).run())
+				.isInstanceOf(RuntimeException.class)
+				.hasMessageContaining("Request to delete an issue JIRATEST1-1 that is actually not deleted");
 
 		// we expect that
-		//   - we called the source jira and it didn't throw, which should mean that the issue actually still exists in the original JIRA
-		Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST1-1" ) );
+		// - we called the source jira and it didn't throw, which should mean that the
+		// issue actually still exists in the original JIRA
+		Mockito.verify(source, Mockito.times(1)).getIssue(eq("JIRATEST1-1"));
 	}
 
 	@Test
 	void testRemoveNonExisting() {
 		try {
-			source.itemCannotBeFound.set( "JIRATEST1-1" );
+			source.itemCannotBeFound.set("JIRATEST1-1");
 			long issueId = 1L;
 			String key = "JIRATEST1-1";
-			new JiraIssueDeleteEventHandler( reportingConfig, context, issueId, key ).run();
+			new JiraIssueDeleteEventHandler(reportingConfig, context, issueId, key).run();
 
 			// we expect that
-			//   - we called the source jira and it throws 404
-			//   - destination jira is updated (title)
-			Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST1-1" ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).update( eq( "JIRATEST2-1" ), any() );
-		}
-		finally {
-			source.itemCannotBeFound.set( "" );
+			// - we called the source jira and it throws 404
+			// - destination jira is updated (title)
+			Mockito.verify(source, Mockito.times(1)).getIssue(eq("JIRATEST1-1"));
+			Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any());
+		} finally {
+			source.itemCannotBeFound.set("");
 		}
 	}
 
 	@Test
 	void testAddComment() {
-		new JiraCommentUpsertEventHandler( reportingConfig, context, 1L, 2L ).run();
+		new JiraCommentUpsertEventHandler(reportingConfig, context, 1L, 2L).run();
 
 		// we expect that
-		//   - we looked for an original comment first
-		//   - then tried to find comments
-		//   - then add/update the comment
-		Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( 2L ) );
-		Mockito.verify( source, Mockito.times( 1 ) ).getComment( eq( 2L ), eq( 1L ) );
-		Mockito.verify( destination, Mockito.times( 1 ) ).getComments( eq( "JIRATEST2-2" ), eq( 0 ), eq( 5000 ) );
-		Mockito.verify( destination, Mockito.times( 1 ) ).create( eq( "JIRATEST2-2" ), any() );
+		// - we looked for an original comment first
+		// - then tried to find comments
+		// - then add/update the comment
+		Mockito.verify(source, Mockito.times(1)).getIssue(eq(2L));
+		Mockito.verify(source, Mockito.times(1)).getComment(eq(2L), eq(1L));
+		Mockito.verify(destination, Mockito.times(1)).getComments(eq("JIRATEST2-2"), eq(0), eq(5000));
+		Mockito.verify(destination, Mockito.times(1)).create(eq("JIRATEST2-2"), any());
 	}
 
 	@Test
 	void testRemoveExistingComment() {
-		new JiraCommentDeleteEventHandler( reportingConfig, context, 1L, 2L ).run();
+		new JiraCommentDeleteEventHandler(reportingConfig, context, 1L, 2L).run();
 
 		// we expect that
-		//   - we looked for an original comment first and found it, so we do not remove anything
-		Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( 2L ) );
-		Mockito.verify( source, Mockito.times( 1 ) ).getComment( eq( 2L ), eq( 1L ) );
-		Mockito.verify( destination, Mockito.never() ).deleteComment( eq( "JIRATEST2-2" ), any() );
+		// - we looked for an original comment first and found it, so we do not remove
+		// anything
+		Mockito.verify(source, Mockito.times(1)).getIssue(eq(2L));
+		Mockito.verify(source, Mockito.times(1)).getComment(eq(2L), eq(1L));
+		Mockito.verify(destination, Mockito.never()).deleteComment(eq("JIRATEST2-2"), any());
 	}
 
 	@Test
@@ -124,54 +124,53 @@ class IssueTest {
 		try {
 			long commentId = 123L;
 			long issueId = 2L;
-			source.itemCannotBeFound.set( "%d - %d".formatted( issueId, commentId ) );
-			new JiraCommentDeleteEventHandler( reportingConfig, context, commentId, issueId ).run();
+			source.itemCannotBeFound.set("%d - %d".formatted(issueId, commentId));
+			new JiraCommentDeleteEventHandler(reportingConfig, context, commentId, issueId).run();
 
 			// we expect that
-			//   - we looked for an original comment first and did not find it
-			//   - so we remove the downstream comment
-			Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( issueId ) );
-			Mockito.verify( source, Mockito.times( 1 ) ).getComment( eq( issueId ), eq( commentId ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).getComments( eq( "JIRATEST2-2" ), eq( 0 ), eq( 5000 ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).deleteComment( eq( "JIRATEST2-2" ), any() );
-		}
-		finally {
-			source.itemCannotBeFound.set( "" );
+			// - we looked for an original comment first and did not find it
+			// - so we remove the downstream comment
+			Mockito.verify(source, Mockito.times(1)).getIssue(eq(issueId));
+			Mockito.verify(source, Mockito.times(1)).getComment(eq(issueId), eq(commentId));
+			Mockito.verify(destination, Mockito.times(1)).getComments(eq("JIRATEST2-2"), eq(0), eq(5000));
+			Mockito.verify(destination, Mockito.times(1)).deleteComment(eq("JIRATEST2-2"), any());
+		} finally {
+			source.itemCannotBeFound.set("");
 		}
 	}
 
 	@Test
 	void testIssueLinkCreated() {
 		try {
-			destination.hasIssueLinks.set( false );
-			new JiraIssueLinkUpsertEventHandler( reportingConfig, context, 1L ).run();
+			destination.hasIssueLinks.set(false);
+			new JiraIssueLinkUpsertEventHandler(reportingConfig, context, 1L).run();
 
 			// we expect that
-			//   - we looked an issue link first
-			//   - then we looked up one sides of the link to get the issue and see if there is already a link like that created.
-			//   - and then created an issue link:
-			Mockito.verify( source, Mockito.times( 1 ) ).getIssueLink( eq( 1L ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST2-1" ) );
-			Mockito.verify( destination, Mockito.times( 1 ) ).upsertIssueLink( any() );
-		}
-		finally {
-			destination.hasIssueLinks.set( true );
+			// - we looked an issue link first
+			// - then we looked up one sides of the link to get the issue and see if there
+			// is already a link like that created.
+			// - and then created an issue link:
+			Mockito.verify(source, Mockito.times(1)).getIssueLink(eq(1L));
+			Mockito.verify(destination, Mockito.times(1)).getIssue(eq("JIRATEST2-1"));
+			Mockito.verify(destination, Mockito.times(1)).upsertIssueLink(any());
+		} finally {
+			destination.hasIssueLinks.set(true);
 		}
 	}
 
 	@Test
 	void testIssueLinkDelete() {
 		// Long id, Long sourceIssueId, Long destinationIssueId, String issueLinkTypeId
-		new JiraIssueLinkDeleteEventHandler( reportingConfig, context, 1L, 3L, 7L, "10100" ).run();
+		new JiraIssueLinkDeleteEventHandler(reportingConfig, context, 1L, 3L, 7L, "10100").run();
 
 		// we expect that
-		//   - we look up both sides of the link in the source jira to get the keys
-		//   - then we looked up both sides of the link on the destination side
-		//   - and then delete an issue link:
-		Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( 3L ) );
-		Mockito.verify( source, Mockito.times( 1 ) ).getIssue( eq( 7L ) );
-		Mockito.verify( destination, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST2-3" ) );
-		Mockito.verify( destination, Mockito.times( 1 ) ).getIssue( eq( "JIRATEST2-7" ) );
-		Mockito.verify( destination, Mockito.times( 1 ) ).deleteIssueLink( any() );
+		// - we look up both sides of the link in the source jira to get the keys
+		// - then we looked up both sides of the link on the destination side
+		// - and then delete an issue link:
+		Mockito.verify(source, Mockito.times(1)).getIssue(eq(3L));
+		Mockito.verify(source, Mockito.times(1)).getIssue(eq(7L));
+		Mockito.verify(destination, Mockito.times(1)).getIssue(eq("JIRATEST2-3"));
+		Mockito.verify(destination, Mockito.times(1)).getIssue(eq("JIRATEST2-7"));
+		Mockito.verify(destination, Mockito.times(1)).deleteIssueLink(any());
 	}
 }

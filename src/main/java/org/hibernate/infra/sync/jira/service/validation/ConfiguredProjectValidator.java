@@ -14,23 +14,24 @@ public class ConfiguredProjectValidator implements ConstraintValidator<Configure
 
 	private final Set<String> projects;
 
-	//@Inject
+	// @Inject
 	public ConfiguredProjectValidator() {
 		JiraConfig jiraConfig = null;
 		projects = Set.of();
-		// jiraConfig.projects().keySet().stream().map( s -> s.toLowerCase( Locale.ROOT ) ).collect( Collectors.toSet() );
+		// jiraConfig.projects().keySet().stream().map( s -> s.toLowerCase( Locale.ROOT
+		// ) ).collect( Collectors.toSet() );
 	}
 
 	@Override
 	public boolean isValid(String value, ConstraintValidatorContext context) {
-		if ( value == null ) {
+		if (value == null) {
 			return true;
 		}
-		if ( projects.contains( value.toLowerCase( Locale.ROOT ) ) ) {
+		if (projects.contains(value.toLowerCase(Locale.ROOT))) {
 			return true;
 		}
 
-		context.unwrap( HibernateConstraintValidatorContext.class ).addExpressionVariable( "project", value );
+		context.unwrap(HibernateConstraintValidatorContext.class).addExpressionVariable("project", value);
 
 		return false;
 	}

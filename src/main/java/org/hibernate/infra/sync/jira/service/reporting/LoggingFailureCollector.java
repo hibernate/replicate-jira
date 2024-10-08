@@ -11,22 +11,22 @@ class LoggingFailureCollector implements FailureCollector {
 
 	@Override
 	public void warning(String details) {
-		Log.warn( details );
+		Log.warn(details);
 	}
 
 	@Override
 	public void warning(String details, Exception exception) {
-		Log.warn( details, exception );
+		Log.warn(details, exception);
 	}
 
 	@Override
 	public void critical(String details) {
-		Log.error( details );
+		Log.error(details);
 	}
 
 	@Override
 	public void critical(String details, Exception exception) {
-		Log.error( details, exception );
+		Log.error(details, exception);
 	}
 
 	@Override

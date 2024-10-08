@@ -18,11 +18,7 @@ public class JiraIssueLink extends JiraBaseObject {
 
 		@Override
 		public String toString() {
-			return "LinkObject{" +
-					"id='" + id + '\''
-					+ ", key='" + key + '\''
-					+ ", self=" + self
-					+ '}';
+			return "LinkObject{" + "id='" + id + '\'' + ", key='" + key + '\'' + ", self=" + self + '}';
 		}
 	}
 }

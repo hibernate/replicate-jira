@@ -1,6 +1,5 @@
 package org.hibernate.infra.sync.jira.service.jira.client;
 
-
 import java.util.List;
 
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
@@ -11,7 +10,6 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulkRespon
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueResponse;
-import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueTypes;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraSimpleObject;
@@ -35,7 +33,8 @@ import jakarta.ws.rs.core.Response;
 
 /**
  * The REST client to make various JIRA operations that we are interested in.
- * Note: the client assumes that the base URI for it is defined up to the API version (included), e.g.:
+ * Note: the client assumes that the base URI for it is defined up to the API
+ * version (included), e.g.:
  */
 public interface JiraRestClient {
 
@@ -77,11 +76,13 @@ public interface JiraRestClient {
 
 	@GET
 	@Path("/issue/{issueId}/comment")
-	JiraComments getComments(@PathParam("issueId") Long issueId, @QueryParam("startAt") int startAt, @QueryParam("maxResults") int maxResults);
+	JiraComments getComments(@PathParam("issueId") Long issueId, @QueryParam("startAt") int startAt,
+			@QueryParam("maxResults") int maxResults);
 
 	@GET
 	@Path("/issue/{issueKey}/comment")
-	JiraComments getComments(@PathParam("issueKey") String issueKey, @QueryParam("startAt") int startAt, @QueryParam("maxResults") int maxResults);
+	JiraComments getComments(@PathParam("issueKey") String issueKey, @QueryParam("startAt") int startAt,
+			@QueryParam("maxResults") int maxResults);
 
 	@POST
 	@Path("/issue/{issueKey}/comment")
@@ -91,7 +92,8 @@ public interface JiraRestClient {
 	@PUT
 	@Path("/issue/{issueKey}/comment/{commentId}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	JiraIssueResponse update(@PathParam("issueKey") String issueKey, @PathParam("commentId") String commentId, JiraComment comment);
+	JiraIssueResponse update(@PathParam("issueKey") String issueKey, @PathParam("commentId") String commentId,
+			JiraComment comment);
 
 	@GET
 	@Path("/priority")
@@ -131,7 +133,8 @@ public interface JiraRestClient {
 
 	@GET
 	@Path("/search")
-	JiraIssues find(@QueryParam("jql") String query, @QueryParam("startAt") int startAt, @QueryParam("maxResults") int maxResults);
+	JiraIssues find(@QueryParam("jql") String query, @QueryParam("startAt") int startAt,
+			@QueryParam("maxResults") int maxResults);
 
 	@POST
 	@Path("/issue/{issueKey}/transitions")
@@ -139,15 +142,15 @@ public interface JiraRestClient {
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
-		return defaultObjectMapper.copy()
-				.setDefaultPropertyInclusion( JsonInclude.Include.NON_EMPTY );
+		return defaultObjectMapper.copy().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY);
 	}
 
 	@ClientExceptionMapper
 	static RuntimeException toException(Response response) {
-		if ( response.getStatusInfo().getFamily() == Response.Status.Family.CLIENT_ERROR
-				|| response.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR ) {
-			return new JiraRestException( "Encountered an error calling Jira REST API. See server logs for details", response.getStatus() );
+		if (response.getStatusInfo().getFamily() == Response.Status.Family.CLIENT_ERROR
+				|| response.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR) {
+			return new JiraRestException("Encountered an error calling Jira REST API. See server logs for details",
+					response.getStatus());
 		}
 		return null;
 	}

@@ -50,163 +50,170 @@ public class JiraService {
 	private final Scheduler scheduler;
 
 	@Inject
-	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
-		executor = new ThreadPoolExecutor( processingConfig.threads(), processingConfig.threads(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>( processingConfig.queueSize() ) );
+	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig,
+			Scheduler scheduler) {
+		executor = new ThreadPoolExecutor(processingConfig.threads(), processingConfig.threads(), 0L,
+				TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(processingConfig.queueSize()));
 
 		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
-		for ( var entry : jiraConfig.projectGroup().entrySet() ) {
-			JiraRestClient source = JiraRestClientBuilder.of( entry.getValue().source() );
-			JiraRestClient destination = JiraRestClientBuilder.of( entry.getValue().destination() );
+		for (var entry : jiraConfig.projectGroup().entrySet()) {
+			JiraRestClient source = JiraRestClientBuilder.of(entry.getValue().source());
+			JiraRestClient destination = JiraRestClientBuilder.of(entry.getValue().destination());
 
-			for ( var project : entry.getValue().projects().entrySet() ) {
-				contextMap.put( project.getKey(), new HandlerProjectContext( project.getKey(), entry.getKey(), source, destination, entry.getValue() ) );
+			for (var project : entry.getValue().projects().entrySet()) {
+				contextMap.put(project.getKey(), new HandlerProjectContext(project.getKey(), entry.getKey(), source,
+						destination, entry.getValue()));
 			}
 		}
 
-		this.contextPerProject = Collections.unmodifiableMap( contextMap );
+		this.contextPerProject = Collections.unmodifiableMap(contextMap);
 		this.reportingConfig = reportingConfig;
 
-		configureScheduledTasks( scheduler, jiraConfig );
+		configureScheduledTasks(scheduler, jiraConfig);
 		this.jiraConfig = jiraConfig;
 		this.scheduler = scheduler;
 	}
 
 	private void configureScheduledTasks(Scheduler scheduler, JiraConfig jiraConfig) {
-		for ( var entry : jiraConfig.projectGroup().entrySet() ) {
-			scheduler.newJob( "Sync project group %s".formatted( entry.getKey() ) ).setCron( entry.getValue().scheduled().cron() ).setConcurrentExecution( Scheduled.ConcurrentExecution.SKIP ).setTask( executionContext -> {
-				syncLastUpdated( entry.getKey() );
-			} ).schedule();
+		for (var entry : jiraConfig.projectGroup().entrySet()) {
+			scheduler.newJob("Sync project group %s".formatted(entry.getKey()))
+					.setCron(entry.getValue().scheduled().cron())
+					.setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP).setTask(executionContext -> {
+						syncLastUpdated(entry.getKey());
+					}).schedule();
 		}
 	}
 
 	public void registerManagementRoutes(@Observes ManagementInterface mi) {
-		mi.router().get( "/sync/issues/init" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+		mi.router().get("/sync/issues/init").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString( "project" );
+			String project = request.getString("project");
 
-			HandlerProjectContext context = contextPerProject.get( project );
+			HandlerProjectContext context = contextPerProject.get(project);
 
-			if ( context == null ) {
-				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong( context.getLargestSyncedJiraIssueKeyNumber() );
+			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(context.getLargestSyncedJiraIssueKeyNumber());
 
-			String identity = "Init Sync for project %s".formatted( project );
-			scheduler.newJob( identity )
-					.setConcurrentExecution( Scheduled.ConcurrentExecution.SKIP )
+			String identity = "Init Sync for project %s".formatted(project);
+			scheduler.newJob(identity).setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP)
 					// every 10 seconds:
-					.setCron( "0/10 * * * * ?" )
-					.setTask( executionContext -> {
-						Optional<JiraIssue> issueToSync = context.getNextIssueToSync( largestSyncedJiraIssueKeyNumber.get() );
-						if ( issueToSync.isEmpty() ) {
-							scheduler.unscheduleJob( identity );
+					.setCron("0/10 * * * * ?").setTask(executionContext -> {
+						Optional<JiraIssue> issueToSync = context
+								.getNextIssueToSync(largestSyncedJiraIssueKeyNumber.get());
+						if (issueToSync.isEmpty()) {
+							scheduler.unscheduleJob(identity);
+						} else {
+							triggerSyncEvent(issueToSync.get());
+							largestSyncedJiraIssueKeyNumber.set(JiraIssue.keyToLong(issueToSync.get().key));
 						}
-						else {
-							triggerSyncEvent( issueToSync.get() );
-							largestSyncedJiraIssueKeyNumber.set( JiraIssue.keyToLong( issueToSync.get().key ) );
-						}
-					} )
-					.schedule();
+					}).schedule();
 			rc.end();
-		} );
-		mi.router().post( "/sync/issues/list" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+		});
+		mi.router().post("/sync/issues/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			// sync issues based on a list of issue-keys supplied in the JSON body:
 			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString( "project" );
-			List<String> issueKeys = request.getJsonArray( "issues" ).stream().map( Objects::toString ).toList();
+			String project = request.getString("project");
+			List<String> issueKeys = request.getJsonArray("issues").stream().map(Objects::toString).toList();
 
-			HandlerProjectContext context = contextPerProject.get( project );
+			HandlerProjectContext context = contextPerProject.get(project);
 
-			if ( context == null ) {
-				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			executor.submit( () -> {
-				for ( String issueKey : issueKeys ) {
-					triggerSyncEvent( context.sourceJiraClient().getIssue( issueKey ) );
+			executor.submit(() -> {
+				for (String issueKey : issueKeys) {
+					triggerSyncEvent(context.sourceJiraClient().getIssue(issueKey));
 				}
-			} );
+			});
 			rc.end();
-		} );
-		mi.router().post( "/sync/issues/query" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+		});
+		mi.router().post("/sync/issues/query").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString( "project" );
-			String query = request.getString( "query" );
+			String project = request.getString("project");
+			String query = request.getString("query");
 
-			HandlerProjectContext context = contextPerProject.get( project );
+			HandlerProjectContext context = contextPerProject.get(project);
 
-			if ( context == null ) {
-				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			executor.submit( () -> syncByQuery( query, context ) );
+			executor.submit(() -> syncByQuery(query, context));
 			rc.end();
-		} );
-		mi.router().post( "/sync/comments/list" ).consumes( MediaType.APPLICATION_JSON ).blockingHandler( rc -> {
+		});
+		mi.router().post("/sync/comments/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString( "project" );
-			List<JiraComment> comments = request.getJsonArray( "comments" ).stream().map( Objects::toString )
-					.map( JiraComment::new ).toList();
+			String project = request.getString("project");
+			List<JiraComment> comments = request.getJsonArray("comments").stream().map(Objects::toString)
+					.map(JiraComment::new).toList();
 
-			HandlerProjectContext context = contextPerProject.get( project );
+			HandlerProjectContext context = contextPerProject.get(project);
 
-			if ( context == null ) {
-				throw new IllegalArgumentException( "Unknown project '%s'".formatted( project ) );
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
 			// can trigger directly as we do not make any REST requests here:
-			triggerCommentSyncEvents( project, comments );
+			triggerCommentSyncEvents(project, comments);
 			rc.end();
-		} );
+		});
 	}
 
 	/**
-	 * At this point we want to only make some simple validation of the request body,
-	 * and then add a request to the processing queue.
-	 * We do not want to start doing actual processing before replying back to the Jira that we've received the event.
-	 * It may be that processing will take some time, and it may result in a timeout on the hook side.
+	 * At this point we want to only make some simple validation of the request
+	 * body, and then add a request to the processing queue. We do not want to start
+	 * doing actual processing before replying back to the Jira that we've received
+	 * the event. It may be that processing will take some time, and it may result
+	 * in a timeout on the hook side.
 	 *
-	 * @param project The project key as defined in the {@link org.hibernate.infra.sync.jira.JiraConfig.JiraProjectGroup#projects()}
-	 * @param event The body of the event posted by the webhook.
+	 * @param project
+	 *            The project key as defined in the
+	 *            {@link org.hibernate.infra.sync.jira.JiraConfig.JiraProjectGroup#projects()}
+	 * @param event
+	 *            The body of the event posted by the webhook.
 	 */
 	public void acknowledge(String project, JiraWebHookEvent event) {
-		event.eventType().ifPresentOrElse( eventType -> {
-			var context = contextPerProject.get( project );
-			if ( context == null ) {
-				FailureCollector failureCollector = FailureCollector.collector( reportingConfig );
-				failureCollector.critical( "Unable to determine handler context for project %s. Was it not configured ?".formatted( project ) );
+		event.eventType().ifPresentOrElse(eventType -> {
+			var context = contextPerProject.get(project);
+			if (context == null) {
+				FailureCollector failureCollector = FailureCollector.collector(reportingConfig);
+				failureCollector.critical("Unable to determine handler context for project %s. Was it not configured ?"
+						.formatted(project));
 				failureCollector.close();
-				throw new ConstraintViolationException( "Project " + project + " is not configured.", Set.of() );
+				throw new ConstraintViolationException("Project " + project + " is not configured.", Set.of());
 			}
 
-			for ( Runnable handler : eventType.handlers( reportingConfig, event, context ) ) {
-				executor.submit( handler );
+			for (Runnable handler : eventType.handlers(reportingConfig, event, context)) {
+				executor.submit(handler);
 			}
-		}, () -> Log.infof( "Event type %s is not supported and cannot be handled.", event.webhookEvent ) );
+		}, () -> Log.infof("Event type %s is not supported and cannot be handled.", event.webhookEvent));
 	}
 
 	public void syncLastUpdated(String projectGroup) {
-		try ( FailureCollector failureCollector = FailureCollector.collector( reportingConfig ) ) {
-			Log.infof( "Starting scheduled sync of issues for the project group %s", projectGroup );
+		try (FailureCollector failureCollector = FailureCollector.collector(reportingConfig)) {
+			Log.infof("Starting scheduled sync of issues for the project group %s", projectGroup);
 
-			JiraConfig.JiraProjectGroup group = jiraConfig.projectGroup().get( projectGroup );
-			for ( String project : group.projects().keySet() ) {
-				Log.infof( "Generating issues for %s project.", project );
-				HandlerProjectContext context = contextPerProject.get( project );
+			JiraConfig.JiraProjectGroup group = jiraConfig.projectGroup().get(projectGroup);
+			for (String project : group.projects().keySet()) {
+				Log.infof("Generating issues for %s project.", project);
+				HandlerProjectContext context = contextPerProject.get(project);
 
-				String query = "project=%s and updated >= %s ORDER BY key".formatted( context.project().originalProjectKey(), context.projectGroup().scheduled().timeFilter() );
+				String query = "project=%s and updated >= %s ORDER BY key".formatted(
+						context.project().originalProjectKey(), context.projectGroup().scheduled().timeFilter());
 				try {
-					syncByQuery( query, context );
-				}
-				catch (Exception e) {
-					failureCollector.warning( "Failed to fetch issues for a query '%s': %s".formatted( query, e.getMessage() ), e );
+					syncByQuery(query, context);
+				} catch (Exception e) {
+					failureCollector
+							.warning("Failed to fetch issues for a query '%s': %s".formatted(query, e.getMessage()), e);
 					break;
 				}
 			}
-		}
-		finally {
-			Log.info( "Finished scheduled sync of issues" );
+		} finally {
+			Log.info("Finished scheduled sync of issues");
 		}
 	}
 
@@ -215,11 +222,11 @@ public class JiraService {
 		int start = 0;
 		int max = 100;
 		do {
-			issues = context.sourceJiraClient().find( query, start, max );
-			issues.issues.forEach( this::triggerSyncEvent );
+			issues = context.sourceJiraClient().find(query, start, max);
+			issues.issues.forEach(this::triggerSyncEvent);
 
 			start += max;
-		} while ( !issues.issues.isEmpty() );
+		} while (!issues.issues.isEmpty());
 	}
 
 	private void triggerSyncEvent(JiraIssue jiraIssue) {
@@ -229,34 +236,34 @@ public class JiraService {
 		event.issue.id = jiraIssue.id;
 		event.issue.key = jiraIssue.key;
 
-		String projectKey = Objects.toString( jiraIssue.fields.project.properties().get( "key" ) );
-		acknowledge( projectKey, event );
+		String projectKey = Objects.toString(jiraIssue.fields.project.properties().get("key"));
+		acknowledge(projectKey, event);
 
 		// now sync comments:
-		if ( jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null ) {
-			triggerCommentSyncEvents( projectKey, jiraIssue.fields.comment.comments );
+		if (jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null) {
+			triggerCommentSyncEvents(projectKey, jiraIssue.fields.comment.comments);
 		}
 
 		// and links:
-		if ( jiraIssue.fields.issuelinks != null ) {
-			for ( JiraIssueLink link : jiraIssue.fields.issuelinks ) {
+		if (jiraIssue.fields.issuelinks != null) {
+			for (JiraIssueLink link : jiraIssue.fields.issuelinks) {
 				event = new JiraWebHookEvent();
 				event.webhookEvent = JiraWebhookEventType.ISSUELINK_CREATED.getName();
 				event.issueLink = new JiraWebHookIssueLink();
-				event.issueLink.id = Long.parseLong( link.id );
+				event.issueLink.id = Long.parseLong(link.id);
 
-				acknowledge( projectKey, event );
+				acknowledge(projectKey, event);
 			}
 		}
 	}
 
 	private void triggerCommentSyncEvents(String projectKey, List<JiraComment> comments) {
-		for ( JiraComment comment : comments ) {
+		for (JiraComment comment : comments) {
 			var event = new JiraWebHookEvent();
 			event.comment = new JiraWebHookObject();
-			event.comment.id = Long.parseLong( comment.id );
+			event.comment.id = Long.parseLong(comment.id);
 			event.webhookEvent = JiraWebhookEventType.COMMENT_UPDATED.getName();
-			acknowledge( projectKey, event );
+			acknowledge(projectKey, event);
 		}
 	}
 }

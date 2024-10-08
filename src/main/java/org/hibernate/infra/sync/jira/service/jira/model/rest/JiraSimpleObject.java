@@ -18,11 +18,7 @@ public class JiraSimpleObject extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "SimpleObjectField{"
-				+ "id=" + id
-				+ ", name='" + name + '\''
-				+ ", self=" + self
-				+ "otherProperties=" + properties()
-				+ '}';
+		return "SimpleObjectField{" + "id=" + id + ", name='" + name + '\'' + ", self=" + self + "otherProperties="
+				+ properties() + '}';
 	}
 }

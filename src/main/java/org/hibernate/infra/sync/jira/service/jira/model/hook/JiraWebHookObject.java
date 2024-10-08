@@ -10,10 +10,6 @@ public class JiraWebHookObject extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "JiraWebHookObject{"
-				+ "id=" + id
-				+ ", self=" + self
-				+ ", otherProperties=" + properties()
-				+ '}';
+		return "JiraWebHookObject{" + "id=" + id + ", self=" + self + ", otherProperties=" + properties() + '}';
 	}
 }

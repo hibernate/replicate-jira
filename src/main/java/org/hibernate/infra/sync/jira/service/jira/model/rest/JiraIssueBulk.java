@@ -16,13 +16,11 @@ public class JiraIssueBulk extends JiraBaseObject {
 	}
 
 	public JiraIssueBulk(JiraIssue placeholder, int times) {
-		this.issueUpdates = Collections.nCopies( times, placeholder );
+		this.issueUpdates = Collections.nCopies(times, placeholder);
 	}
 
 	@Override
 	public String toString() {
-		return "JiraIssueBulk{" +
-				"issueUpdates=" + issueUpdates +
-				'}';
+		return "JiraIssueBulk{" + "issueUpdates=" + issueUpdates + '}';
 	}
 }
