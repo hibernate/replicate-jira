@@ -1,6 +1,7 @@
 package org.hibernate.infra.sync.jira.service.jira.client;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.hibernate.infra.sync.jira.JiraConfig;
@@ -23,6 +24,8 @@ public class JiraRestClientBuilder {
 		Map<String, String> headers = jira.loginKind().headers(jiraUser.email(), jiraUser.token());
 
 		QuarkusRestClientBuilder builder = QuarkusRestClientBuilder.newBuilder().baseUri(jira.apiUri())
+				// specifying a timeout of 0 represents infinity
+				.connectTimeout(0, TimeUnit.HOURS).readTimeout(0, TimeUnit.HOURS)
 				.clientHeadersFactory((incomingHeaders, clientOutgoingHeaders) -> {
 					for (var entry : headers.entrySet()) {
 						clientOutgoingHeaders.add(entry.getKey(), entry.getValue());
