@@ -1,5 +1,6 @@
 package org.hibernate.infra.sync.jira.service.jira.client;
 
+import java.net.URI;
 import java.util.List;
 
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
@@ -146,10 +147,12 @@ public interface JiraRestClient {
 	}
 
 	@ClientExceptionMapper
-	static RuntimeException toException(Response response) {
+	static RuntimeException toException(URI uri, Response response) {
 		if (response.getStatusInfo().getFamily() == Response.Status.Family.CLIENT_ERROR
 				|| response.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR) {
-			return new JiraRestException("Encountered an error calling Jira REST API. See server logs for details",
+			return new JiraRestException(
+					"Encountered an error calling Jira REST API: %s resulting in: %s".formatted(uri,
+							response.hasEntity() ? response.readEntity(String.class) : "No response body"),
 					response.getStatus());
 		}
 		return null;

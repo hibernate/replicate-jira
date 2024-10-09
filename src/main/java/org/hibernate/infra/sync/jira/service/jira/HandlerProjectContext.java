@@ -12,6 +12,8 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulk;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
 
+import io.quarkus.logging.Log;
+
 public final class HandlerProjectContext {
 
 	// JIRA REST API creates upto 50 issues at a time:
@@ -99,6 +101,7 @@ public final class HandlerProjectContext {
 				return JiraIssue.keyToLong(issues.issues.get(0).key);
 			}
 		} catch (Exception e) {
+			Log.warn("Couldn't get the latest Jira issue key number", e);
 			return -1L;
 		}
 	}
