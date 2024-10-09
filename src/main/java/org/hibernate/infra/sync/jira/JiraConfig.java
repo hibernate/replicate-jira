@@ -59,6 +59,9 @@ public interface JiraConfig {
 		JiraUser apiUser();
 
 		URI apiUri();
+
+		@WithDefault("true")
+		boolean logRequests();
 	}
 
 	interface JiraUser {
