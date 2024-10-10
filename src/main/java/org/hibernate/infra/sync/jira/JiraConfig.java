@@ -50,6 +50,16 @@ public interface JiraConfig {
 		String projectKey();
 
 		String originalProjectKey();
+
+		WebHookSecurity security();
+	}
+
+	interface WebHookSecurity {
+		@WithDefault("false")
+		boolean enabled();
+
+		@WithDefault("not-a-secret")
+		String secret();
 	}
 
 	interface Instance {
