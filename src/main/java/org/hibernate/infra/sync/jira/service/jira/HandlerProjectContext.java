@@ -14,7 +14,7 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
 
 import io.quarkus.logging.Log;
 
-public final class HandlerProjectContext {
+public final class HandlerProjectContext implements AutoCloseable {
 
 	// JIRA REST API creates upto 50 issues at a time:
 	// https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issues/#api-rest-api-2-issue-bulk-post
@@ -26,18 +26,18 @@ public final class HandlerProjectContext {
 	private final String projectGroupName;
 	private final JiraRestClient sourceJiraClient;
 	private final JiraRestClient destinationJiraClient;
-	private final JiraConfig.JiraProjectGroup projectGroup;
+	private final HandlerProjectGroupContext projectGroupContext;
 	private final JiraConfig.JiraProject project;
 	private final AtomicLong currentIssueKeyNumber;
 	private final JiraIssueBulk bulk;
 
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
-			JiraRestClient destinationJiraClient, JiraConfig.JiraProjectGroup projectGroup) {
+			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext) {
 		this.projectName = projectName;
 		this.projectGroupName = projectGroupName;
 		this.sourceJiraClient = sourceJiraClient;
 		this.destinationJiraClient = destinationJiraClient;
-		this.projectGroup = projectGroup;
+		this.projectGroupContext = projectGroupContext;
 		this.project = projectGroup().projects().get(projectName());
 		this.currentIssueKeyNumber = new AtomicLong(getCurrentLatestJiraIssueKeyNumber());
 		this.bulk = new JiraIssueBulk(createIssuePlaceholder(), ISSUES_PER_REQUEST);
@@ -64,7 +64,7 @@ public final class HandlerProjectContext {
 	}
 
 	public JiraConfig.JiraProjectGroup projectGroup() {
-		return projectGroup;
+		return projectGroupContext.projectGroup();
 	}
 
 	public AtomicLong currentIssueKeyNumber() {
@@ -129,6 +129,10 @@ public final class HandlerProjectContext {
 		}
 	}
 
+	public void startProcessingEvent() throws InterruptedException {
+		projectGroupContext.startProcessingEvent();
+	}
+
 	private boolean requiredIssueKeyNumberShouldBeAvailable(Long key) {
 		return currentIssueKeyNumber.get() >= key;
 	}
@@ -156,8 +160,12 @@ public final class HandlerProjectContext {
 	public String toString() {
 		return "HandlerProjectContext[" + "projectName=" + projectName + ", " + "projectGroupName=" + projectGroupName
 				+ ", " + "sourceJiraClient=" + sourceJiraClient + ", " + "destinationJiraClient="
-				+ destinationJiraClient + ", " + "projectGroup=" + projectGroup + ", " + "currentIssueKeyNumber="
-				+ currentIssueKeyNumber + ']';
+				+ destinationJiraClient + ", " + "projectGroup=" + projectGroupContext.projectGroup() + ", "
+				+ "currentIssueKeyNumber=" + currentIssueKeyNumber + ']';
 	}
 
+	@Override
+	public void close() {
+		projectGroupContext.close();
+	}
 }

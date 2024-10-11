@@ -34,6 +34,7 @@ import io.quarkus.scheduler.Scheduled;
 import io.quarkus.scheduler.Scheduler;
 import io.quarkus.vertx.http.ManagementInterface;
 import io.vertx.core.json.JsonObject;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
@@ -59,10 +60,10 @@ public class JiraService {
 		for (var entry : jiraConfig.projectGroup().entrySet()) {
 			JiraRestClient source = JiraRestClientBuilder.of(entry.getValue().source());
 			JiraRestClient destination = JiraRestClientBuilder.of(entry.getValue().destination());
-
+			HandlerProjectGroupContext groupContext = new HandlerProjectGroupContext(entry.getValue());
 			for (var project : entry.getValue().projects().entrySet()) {
-				contextMap.put(project.getKey(), new HandlerProjectContext(project.getKey(), entry.getKey(), source,
-						destination, entry.getValue()));
+				contextMap.put(project.getKey(),
+						new HandlerProjectContext(project.getKey(), entry.getKey(), source, destination, groupContext));
 			}
 		}
 
@@ -214,6 +215,25 @@ public class JiraService {
 			}
 		} finally {
 			Log.info("Finished scheduled sync of issues");
+		}
+	}
+
+	@PreDestroy
+	public void finishProcessingAndShutdown() {
+		try {
+			executor.shutdown();
+			if (!executor.awaitTermination(2, TimeUnit.MINUTES)) {
+				Log.infof("Not all events were processed before the shutdown");
+			}
+			for (HandlerProjectContext context : contextPerProject.values()) {
+				try {
+					context.close();
+				} catch (Exception e) {
+					Log.errorf(e, "Error closing context %s: %s", context, e.getMessage());
+				}
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 

@@ -34,6 +34,15 @@ public interface JiraConfig {
 
 		Scheduled scheduled();
 
+		EventProcessing processing();
+	}
+
+	interface EventProcessing {
+		@WithDefault("5")
+		int eventsPerTimeframe();
+
+		@WithDefault("2")
+		int timeframeInSeconds();
 	}
 
 	interface Scheduled {

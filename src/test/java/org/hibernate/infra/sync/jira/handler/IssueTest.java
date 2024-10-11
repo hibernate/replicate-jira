@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.mock.SampleJiraRestClient;
 import org.hibernate.infra.sync.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.sync.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraCommentDeleteEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraCommentUpsertEventHandler;
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueDeleteEventHandler;
@@ -15,6 +16,7 @@ import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueLinkUpsertEve
 import org.hibernate.infra.sync.jira.service.jira.handler.JiraIssueUpsertEventHandler;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +46,12 @@ class IssueTest {
 	@BeforeEach
 	void setUp() {
 		context = new HandlerProjectContext("JIRATEST1", PROJECT_GROUP_NAME, source, destination,
-				jiraConfig.projectGroup().get(PROJECT_GROUP_NAME));
+				new HandlerProjectGroupContext(jiraConfig.projectGroup().get(PROJECT_GROUP_NAME)));
+	}
+
+	@AfterEach
+	void tearDown() {
+		context.close();
 	}
 
 	@Test
