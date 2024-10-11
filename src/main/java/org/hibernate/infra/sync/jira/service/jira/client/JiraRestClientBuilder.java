@@ -24,8 +24,7 @@ public class JiraRestClientBuilder {
 		Map<String, String> headers = jira.loginKind().headers(jiraUser.email(), jiraUser.token());
 
 		QuarkusRestClientBuilder builder = QuarkusRestClientBuilder.newBuilder().baseUri(jira.apiUri())
-				// specifying a timeout of 0 represents infinity
-				.connectTimeout(0, TimeUnit.HOURS).readTimeout(0, TimeUnit.HOURS)
+				.connectTimeout(5, TimeUnit.MINUTES).readTimeout(10, TimeUnit.MINUTES)
 				.clientHeadersFactory((incomingHeaders, clientOutgoingHeaders) -> {
 					for (var entry : headers.entrySet()) {
 						clientOutgoingHeaders.add(entry.getKey(), entry.getValue());

@@ -148,9 +148,13 @@ public abstract class JiraEventHandler implements Runnable {
 	@Override
 	public final void run() {
 		try {
+			context.startProcessingEvent();
 			doRun();
 		} catch (RuntimeException e) {
 			failureCollector.critical("Failed to handled the event", e);
+		} catch (InterruptedException e) {
+			failureCollector.critical("Interrupted while waiting in the queue", e);
+			Thread.currentThread().interrupt();
 		} finally {
 			failureCollector.close();
 		}

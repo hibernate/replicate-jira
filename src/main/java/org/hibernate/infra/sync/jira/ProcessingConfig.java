@@ -5,9 +5,9 @@ import io.smallrye.config.WithDefault;
 
 @ConfigMapping(prefix = "processing.events")
 public interface ProcessingConfig {
-	@WithDefault("1000")
+	@WithDefault("10000")
 	int queueSize();
 
-	@WithDefault("20")
+	@WithDefault("5")
 	int threads();
 }
