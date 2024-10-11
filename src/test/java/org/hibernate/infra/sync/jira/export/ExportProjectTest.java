@@ -2,6 +2,7 @@ package org.hibernate.infra.sync.jira.export;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -90,8 +91,9 @@ class ExportProjectTest {
 		JiraConfig.JiraProjectGroup projectGroup = jiraConfig.projectGroup().get("hibernate");
 		JiraRestClient source = JiraRestClientBuilder.of(projectGroup.source());
 
-		List<String> headers = new ArrayList<>(List.of("key", "issue type", "status", "project key", "project name",
-				"reporter key", "reporter name", "assignee key", "assignee name", "summary", "description"));
+		List<String> headers = new ArrayList<>(
+				List.of("key", "issue type", "status", "project key", "project name", "reporter name",
+						"reporter display name", "assignee name", "assignee display name", "summary", "description"));
 
 		for (int i = 0; i < MAX_LABELS_LIMIT; i++) {
 			headers.add("labels");
@@ -106,7 +108,8 @@ class ExportProjectTest {
 
 		String query = "project=%s ORDER BY key".formatted(PROJECT_ID);
 
-		try (final FileWriter fw = new FileWriter("target/jira-exported-project-%s.csv".formatted(PROJECT_ID));
+		try (final FileWriter fw = new FileWriter(
+				"target/jira-exported-project-%s-%s.csv".formatted(PROJECT_ID, LocalDate.now()));
 				final CSVPrinter printer = new CSVPrinter(fw, csvFormat)) {
 			do {
 				issues = source.find(query, start, max);
