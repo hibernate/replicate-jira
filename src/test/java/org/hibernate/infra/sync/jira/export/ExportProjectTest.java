@@ -28,6 +28,10 @@ import org.apache.commons.csv.CSVPrinter;
 @TestProfile(ExportProjectTest.Profile.class)
 @QuarkusTest
 class ExportProjectTest {
+
+	private static final String DEFAULT_REPORTER_NAME = "hibernate-admins@redhat.com";
+	private static final String DEFAULT_REPORTER_DISPLAY_NAME = "Hibernate Admins";
+
 	public static class Profile implements QuarkusTestProfile {
 		@Override
 		public Map<String, String> getConfigOverrides() {
@@ -123,8 +127,8 @@ class ExportProjectTest {
 					Object reporter = issue.fields.reporter == null
 							? null
 							: projectGroup.users().mapping().getOrDefault(issue.fields.reporter.accountId, null);
-					row.add(reporter);
-					row.add(reporter != null ? issue.fields.reporter.displayName : null);
+					row.add( reporter == null ? DEFAULT_REPORTER_NAME : reporter );
+					row.add(reporter != null ? issue.fields.reporter.displayName : DEFAULT_REPORTER_DISPLAY_NAME);
 					Object assignee = issue.fields.assignee == null
 							? null
 							: projectGroup.users().mapping().getOrDefault(issue.fields.assignee.accountId, null);
