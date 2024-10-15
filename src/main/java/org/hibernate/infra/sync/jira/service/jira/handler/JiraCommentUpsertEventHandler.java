@@ -64,4 +64,10 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 
 				""".formatted(jiraCommentUri, JiraTextContent.userIdPart(comment.author), jiraUserUri);
 	}
+
+	@Override
+	public String toString() {
+		return "JiraCommentUpsertEventHandler[" + "issueId=" + issueId + ", objectId=" + objectId + ", project="
+				+ context.projectName() + ']';
+	}
 }

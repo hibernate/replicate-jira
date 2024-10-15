@@ -46,4 +46,9 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 		toCreate.outwardIssue.key = outwardIssue;
 		context.destinationJiraClient().upsertIssueLink(toCreate);
 	}
+
+	@Override
+	public String toString() {
+		return "JiraIssueLinkUpsertEventHandler[" + "objectId=" + objectId + ", project=" + context.projectName() + ']';
+	}
 }

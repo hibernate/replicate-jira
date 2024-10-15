@@ -31,6 +31,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final AtomicLong currentIssueKeyNumber;
 	private final JiraIssueBulk bulk;
 
+	private final String projectKeyWithDash;
+
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext) {
 		this.projectName = projectName;
@@ -41,6 +43,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.project = projectGroup().projects().get(projectName());
 		this.currentIssueKeyNumber = new AtomicLong(getCurrentLatestJiraIssueKeyNumber());
 		this.bulk = new JiraIssueBulk(createIssuePlaceholder(), ISSUES_PER_REQUEST);
+		this.projectKeyWithDash = "%s-".formatted(project.projectKey());
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -82,8 +85,15 @@ public final class HandlerProjectContext implements AutoCloseable {
 	}
 
 	public Optional<JiraIssue> getNextIssueToSync(Long latestSyncedJiraIssueKeyNumber) {
-		JiraIssues issues = destinationJiraClient.find("project = %s and key > %s-%s ORDER BY key ASC".formatted(
-				project.originalProjectKey(), project.originalProjectKey(), latestSyncedJiraIssueKeyNumber), 0, 1);
+		String query;
+		if (latestSyncedJiraIssueKeyNumber > 0) {
+			query = "project = %s and key > %s-%s ORDER BY key ASC".formatted(project.originalProjectKey(),
+					project.originalProjectKey(), latestSyncedJiraIssueKeyNumber);
+		} else {
+			query = "project = %s ORDER BY key ASC".formatted(project.originalProjectKey(),
+					project.originalProjectKey());
+		}
+		JiraIssues issues = sourceJiraClient.find(query, 0, 1);
 		if (issues.issues.isEmpty()) {
 			return Optional.empty();
 		} else {
@@ -107,7 +117,12 @@ public final class HandlerProjectContext implements AutoCloseable {
 	}
 
 	public void createNextPlaceholderBatch(String upToKey) {
-		createNextPlaceholderBatch(JiraIssue.keyToLong(upToKey));
+		// it only makes sense to do the bulk-create if we are requesting it for the
+		// same project we are actually in.
+		if (upToKey.startsWith(projectKeyWithDash)) {
+			Long upToKeyNumber = JiraIssue.keyToLong(upToKey);
+			createNextPlaceholderBatch(upToKeyNumber);
+		}
 	}
 
 	public void createNextPlaceholderBatch(Long upToKeyNumber) {

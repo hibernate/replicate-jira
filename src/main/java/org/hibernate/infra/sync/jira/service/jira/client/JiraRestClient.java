@@ -20,6 +20,7 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraUser;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.rest.client.reactive.ClientExceptionMapper;
+import io.quarkus.rest.client.reactive.ClientQueryParam;
 import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -37,6 +38,8 @@ import jakarta.ws.rs.core.Response;
  * Note: the client assumes that the base URI for it is defined up to the API
  * version (included), e.g.:
  */
+// so that we do not spam with all notifications ...
+@ClientQueryParam(name = "notifyUsers", value = "false")
 public interface JiraRestClient {
 
 	@GET

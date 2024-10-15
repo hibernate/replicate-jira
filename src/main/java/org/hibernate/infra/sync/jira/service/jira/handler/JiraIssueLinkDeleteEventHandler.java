@@ -7,11 +7,10 @@ import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 
 public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
-
 	private final Long sourceIssueId;
+
 	private final Long destinationIssueId;
 	private final String issueLinkTypeId;
-
 	public JiraIssueLinkDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id,
 			Long sourceIssueId, Long destinationIssueId, String issueLinkTypeId) {
 		super(reportingConfig, context, id);
@@ -64,5 +63,12 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 				}
 			}
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "JiraIssueLinkDeleteEventHandler[" + "sourceIssueId=" + sourceIssueId + ", destinationIssueId="
+				+ destinationIssueId + ", issueLinkTypeId='" + issueLinkTypeId + '\'' + ", project="
+				+ context.projectName() + ']';
 	}
 }

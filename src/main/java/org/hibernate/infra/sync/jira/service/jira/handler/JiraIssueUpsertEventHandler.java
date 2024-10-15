@@ -60,6 +60,11 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return "JiraIssueUpsertEventHandler[" + "objectId=" + objectId + ", project=" + context.projectName() + ']';
+	}
+
 	private JiraRemoteLink remoteSelfLink(JiraIssue sourceIssue) {
 		URI jiraLink = createJiraIssueUri(sourceIssue);
 
@@ -97,7 +102,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 			}
 			destinationIssue.fields.labels = new ArrayList<>(destinationIssue.fields.labels);
 			for (JiraSimpleObject fixVersion : sourceIssue.fields.fixVersions) {
-				destinationIssue.fields.labels.add("Fix version: %s".formatted(fixVersion.name));
+				destinationIssue.fields.labels.add("Fix version:%s".formatted(fixVersion.name).replace(' ', '_'));
 			}
 		}
 

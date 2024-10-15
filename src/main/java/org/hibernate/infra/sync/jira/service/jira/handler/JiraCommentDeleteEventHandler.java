@@ -36,4 +36,10 @@ public class JiraCommentDeleteEventHandler extends JiraCommentEventHandler {
 			}
 		}
 	}
+
+	@Override
+	public String toString() {
+		return "JiraCommentDeleteEventHandler[" + "issueId=" + issueId + ", objectId=" + objectId + ", project="
+				+ context.projectName() + ']';
+	}
 }

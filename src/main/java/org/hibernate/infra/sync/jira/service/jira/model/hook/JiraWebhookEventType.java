@@ -52,7 +52,7 @@ public enum JiraWebhookEventType {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
 				HandlerProjectContext context) {
-			if (event.issueLink == null || event.issueLink.sourceIssueId == null) {
+			if (event.issueLink == null || event.issueLink.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue link event but source issue id is null: %s".formatted(event));
 			}
@@ -65,7 +65,7 @@ public enum JiraWebhookEventType {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
 				HandlerProjectContext context) {
-			if (event.issueLink == null || event.issueLink.sourceIssueId == null) {
+			if (event.issueLink == null || event.issueLink.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue link event but source issue id is null: %s".formatted(event));
 			}
