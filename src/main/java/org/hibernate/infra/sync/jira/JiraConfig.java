@@ -79,7 +79,7 @@ public interface JiraConfig {
 
 		URI apiUri();
 
-		@WithDefault("true")
+		@WithDefault("false")
 		boolean logRequests();
 	}
 

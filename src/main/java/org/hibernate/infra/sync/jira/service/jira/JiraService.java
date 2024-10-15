@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import org.hibernate.infra.sync.jira.JiraConfig;
 import org.hibernate.infra.sync.jira.ProcessingConfig;
@@ -23,6 +24,7 @@ import org.hibernate.infra.sync.jira.service.jira.model.hook.JiraWebHookIssueLin
 import org.hibernate.infra.sync.jira.service.jira.model.hook.JiraWebHookObject;
 import org.hibernate.infra.sync.jira.service.jira.model.hook.JiraWebhookEventType;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComment;
+import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraComments;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.sync.jira.service.jira.model.rest.JiraIssues;
@@ -46,6 +48,7 @@ public class JiraService {
 
 	private final ReportingConfig reportingConfig;
 	private final ExecutorService executor;
+	private final Supplier<Integer> workQueueSize;
 	private final Map<String, HandlerProjectContext> contextPerProject;
 	private final JiraConfig jiraConfig;
 	private final Scheduler scheduler;
@@ -53,8 +56,10 @@ public class JiraService {
 	@Inject
 	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig,
 			Scheduler scheduler) {
+		LinkedBlockingDeque<Runnable> workQueue = new LinkedBlockingDeque<>(processingConfig.queueSize());
+		workQueueSize = workQueue::size;
 		executor = new ThreadPoolExecutor(processingConfig.threads(), processingConfig.threads(), 0L,
-				TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(processingConfig.queueSize()));
+				TimeUnit.MILLISECONDS, workQueue);
 
 		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
 		for (var entry : jiraConfig.projectGroup().entrySet()) {
@@ -107,7 +112,35 @@ public class JiraService {
 						if (issueToSync.isEmpty()) {
 							scheduler.unscheduleJob(identity);
 						} else {
-							triggerSyncEvent(issueToSync.get());
+							triggerSyncEvent(issueToSync.get(), context);
+							largestSyncedJiraIssueKeyNumber.set(JiraIssue.keyToLong(issueToSync.get().key));
+						}
+					}).schedule();
+			rc.end();
+		});
+		mi.router().get("/sync/issues/init/:project").blockingHandler(rc -> {
+			// TODO: we can remove this one once we figure out why POST management does not
+			// work correctly...
+			String project = rc.pathParam("project");
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(context.getLargestSyncedJiraIssueKeyNumber());
+
+			String identity = "Init Sync for project %s".formatted(project);
+			scheduler.newJob(identity).setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP)
+					// every 10 seconds:
+					.setCron("0/10 * * * * ?").setTask(executionContext -> {
+						Optional<JiraIssue> issueToSync = context
+								.getNextIssueToSync(largestSyncedJiraIssueKeyNumber.get());
+						if (issueToSync.isEmpty()) {
+							scheduler.unscheduleJob(identity);
+						} else {
+							triggerSyncEvent(issueToSync.get(), context);
 							largestSyncedJiraIssueKeyNumber.set(JiraIssue.keyToLong(issueToSync.get().key));
 						}
 					}).schedule();
@@ -127,7 +160,7 @@ public class JiraService {
 
 			executor.submit(() -> {
 				for (String issueKey : issueKeys) {
-					triggerSyncEvent(context.sourceJiraClient().getIssue(issueKey));
+					triggerSyncEvent(context.sourceJiraClient().getIssue(issueKey), context);
 				}
 			});
 			rc.end();
@@ -158,8 +191,9 @@ public class JiraService {
 				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
+			// TODO: needs an issue key
 			// can trigger directly as we do not make any REST requests here:
-			triggerCommentSyncEvents(project, comments);
+			triggerCommentSyncEvents(project, null, comments);
 			rc.end();
 		});
 	}
@@ -243,25 +277,34 @@ public class JiraService {
 		int max = 100;
 		do {
 			issues = context.sourceJiraClient().find(query, start, max);
-			issues.issues.forEach(this::triggerSyncEvent);
+			issues.issues.forEach(jiraIssue -> triggerSyncEvent(jiraIssue, context));
 
 			start += max;
 		} while (!issues.issues.isEmpty());
 	}
 
-	private void triggerSyncEvent(JiraIssue jiraIssue) {
+	private void triggerSyncEvent(JiraIssue jiraIssue, HandlerProjectContext context) {
+		Log.infof("Adding sync events for a jira issue: %s; Already queued events: %s", jiraIssue.key,
+				workQueueSize.get());
+		JiraWebHookIssue issue = new JiraWebHookIssue();
+		issue.id = jiraIssue.id;
+		issue.key = jiraIssue.key;
+
 		JiraWebHookEvent event = new JiraWebHookEvent();
 		event.webhookEvent = JiraWebhookEventType.ISSUE_UPDATED.getName();
-		event.issue = new JiraWebHookIssue();
-		event.issue.id = jiraIssue.id;
-		event.issue.key = jiraIssue.key;
+		event.issue = issue;
 
 		String projectKey = Objects.toString(jiraIssue.fields.project.properties().get("key"));
 		acknowledge(projectKey, event);
 
 		// now sync comments:
 		if (jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null) {
-			triggerCommentSyncEvents(projectKey, jiraIssue.fields.comment.comments);
+			triggerCommentSyncEvents(projectKey, issue, jiraIssue.fields.comment.comments);
+		} else {
+			// comments not always come in the jira request... so if we didn't get any, just
+			// in case we will query for them:
+			JiraComments comments = context.sourceJiraClient().getComments(jiraIssue.id, 0, 500);
+			triggerCommentSyncEvents(projectKey, issue, comments.comments);
 		}
 
 		// and links:
@@ -277,11 +320,12 @@ public class JiraService {
 		}
 	}
 
-	private void triggerCommentSyncEvents(String projectKey, List<JiraComment> comments) {
+	private void triggerCommentSyncEvents(String projectKey, JiraWebHookIssue issue, List<JiraComment> comments) {
 		for (JiraComment comment : comments) {
 			var event = new JiraWebHookEvent();
 			event.comment = new JiraWebHookObject();
 			event.comment.id = Long.parseLong(comment.id);
+			event.issue = issue;
 			event.webhookEvent = JiraWebhookEventType.COMMENT_UPDATED.getName();
 			acknowledge(projectKey, event);
 		}

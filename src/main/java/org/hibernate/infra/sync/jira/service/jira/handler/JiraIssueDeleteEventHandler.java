@@ -59,4 +59,10 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 			}
 		}
 	}
+
+	@Override
+	public String toString() {
+		return "JiraIssueDeleteEventHandler[" + "key='" + key + '\'' + ", objectId=" + objectId + ", project="
+				+ context.projectName() + ']';
+	}
 }

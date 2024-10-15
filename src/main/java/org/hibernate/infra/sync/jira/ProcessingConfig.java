@@ -8,6 +8,6 @@ public interface ProcessingConfig {
 	@WithDefault("10000")
 	int queueSize();
 
-	@WithDefault("5")
+	@WithDefault("2")
 	int threads();
 }

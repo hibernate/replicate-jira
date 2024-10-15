@@ -109,7 +109,7 @@ public abstract class JiraEventHandler implements Runnable {
 	protected Optional<String> linkType(String sourceId) {
 		JiraConfig.ValueMapping mappedValues = context.projectGroup().issueLinkTypes();
 		return Optional.ofNullable(JiraStaticFieldMappingCache.linkType(context.projectGroupName(), sourceId, pk -> {
-			Map<String, String> mapping = context.projectGroup().issueTypes().mapping();
+			Map<String, String> mapping = context.projectGroup().issueLinkTypes().mapping();
 			if (!mapping.isEmpty()) {
 				return mapping;
 			}
@@ -151,7 +151,7 @@ public abstract class JiraEventHandler implements Runnable {
 			context.startProcessingEvent();
 			doRun();
 		} catch (RuntimeException e) {
-			failureCollector.critical("Failed to handled the event", e);
+			failureCollector.critical("Failed to handled the event: %s".formatted(this), e);
 		} catch (InterruptedException e) {
 			failureCollector.critical("Interrupted while waiting in the queue", e);
 			Thread.currentThread().interrupt();
@@ -168,4 +168,6 @@ public abstract class JiraEventHandler implements Runnable {
 		}
 		return key;
 	}
+
+	public abstract String toString();
 }

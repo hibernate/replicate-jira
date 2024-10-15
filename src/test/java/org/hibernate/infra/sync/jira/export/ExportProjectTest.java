@@ -127,7 +127,7 @@ class ExportProjectTest {
 					Object reporter = issue.fields.reporter == null
 							? null
 							: projectGroup.users().mapping().getOrDefault(issue.fields.reporter.accountId, null);
-					row.add( reporter == null ? DEFAULT_REPORTER_NAME : reporter );
+					row.add(reporter == null ? DEFAULT_REPORTER_NAME : reporter);
 					row.add(reporter != null ? issue.fields.reporter.displayName : DEFAULT_REPORTER_DISPLAY_NAME);
 					Object assignee = issue.fields.assignee == null
 							? null
