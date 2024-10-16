@@ -58,11 +58,12 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 	private String prepareCommentQuote(JiraIssue issue, JiraComment comment) {
 		URI jiraCommentUri = createJiraCommentUri(issue, comment);
 		URI jiraUserUri = createJiraUserUri(comment.self, comment.author);
-		return """
+		String content = """
 				{quote}This [comment|%s] was posted by the [user %s|%s].{quote}
 
 
 				""".formatted(jiraCommentUri, JiraTextContent.userIdPart(comment.author), jiraUserUri);
+		return truncateContent(content);
 	}
 
 	@Override
