@@ -19,6 +19,7 @@ import org.hibernate.infra.sync.jira.service.reporting.ReportingConfig;
 import jakarta.ws.rs.core.UriBuilder;
 
 public abstract class JiraEventHandler implements Runnable {
+	protected static final int MAX_CONTENT_SIZE = 65_535;
 
 	protected final Long objectId;
 	protected final FailureCollector failureCollector;
@@ -161,6 +162,21 @@ public abstract class JiraEventHandler implements Runnable {
 	}
 
 	protected abstract void doRun();
+
+	protected String truncateContent(String content) {
+		// NOTE: description/comment content has a limit, and maybe the original one is
+		// close to that limit but since we modify it with the quote info we better make
+		// sure we are still able to fit the content and truncate anything at the end
+		// (we have a link to the original if we want to read that very last part).
+		//
+		// A possible exception returned by the API:
+		// {"errorMessages":[],"errors":{"description":"The entered text is too long. It
+		// exceeds the allowed limit of 65,535 characters."}}
+		if (content.length() > MAX_CONTENT_SIZE) {
+			content = content.substring(0, MAX_CONTENT_SIZE);
+		}
+		return content;
+	}
 
 	protected String toDestinationKey(String key) {
 		if (keyToUpdatePattern.matcher(key).matches()) {

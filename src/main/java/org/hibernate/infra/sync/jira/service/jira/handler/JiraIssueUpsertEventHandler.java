@@ -93,6 +93,7 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		destinationIssue.fields.description = sourceIssue.fields.description;
 		destinationIssue.fields.description = "%s%s".formatted(prepareDescriptionQuote(sourceIssue),
 				Objects.toString(sourceIssue.fields.description, ""));
+		destinationIssue.fields.description = truncateContent(destinationIssue.fields.description);
 
 		destinationIssue.fields.labels = sourceIssue.fields.labels;
 		// let's also add fix versions to the labels
