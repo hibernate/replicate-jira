@@ -20,7 +20,7 @@ concurrency:
 jobs:
   deploy:
 
-    # if: github.repository == 'hibernate/hibernate-jira-sync'
+    # if: github.repository == 'hibernate/replicate-jira'
 
     runs-on: ubuntu-latest
 
@@ -47,9 +47,9 @@ jobs:
 
       - name: Create ImageStream
         run: |
-          oc create imagestream hibernate-jira-sync || true
+          oc create imagestream replicate-jira || true
           # https://docs.openshift.com/container-platform/4.14/openshift_images/using-imagestreams-with-kube-resources.html
-          oc set image-lookup hibernate-jira-sync
+          oc set image-lookup replicate-jira
 
       - name: Retrieve OpenShift Container Registry URL
         id: oc-registry
@@ -84,4 +84,4 @@ jobs:
 
       - name: Deploy Helm charts
         run: |
-          helm upgrade --install hibernate-jira-sync ./target/helm/openshift/hibernate-jira-sync
+          helm upgrade --install replicate-jira ./target/helm/openshift/replicate-jira
