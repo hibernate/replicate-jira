@@ -15,7 +15,7 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.version>3.15.1</quarkus.platform.version>
-        <version.commons-csv>1.11.0</version.commons-csv>
+        <version.commons-csv>1.12.0</version.commons-csv>
         <version.assertj>3.26.0</version.assertj>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.1</surefire-plugin.version>
