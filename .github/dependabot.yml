@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      maven-plugins:
+        patterns:
+          - "*maven*plugin*"
+          - "org.apache.maven*:*"
+        exclude-patterns:
+          - "io.quarkus*"
+      quarkus:
+        patterns:
+          - "io.quarkus:*"
+          - "io.quarkus.*:*"
+          - "io.quarkiverse:*"
+          - "io.quarkiverse.*:*"
+    ignore:
+      # Releases too often, it's annoying
+      - dependency-name: "org.assertj:*"
+        update-types: ["version-update:semver-patch"]
