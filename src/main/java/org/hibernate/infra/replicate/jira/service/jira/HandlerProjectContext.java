@@ -183,4 +183,12 @@ public final class HandlerProjectContext implements AutoCloseable {
 	public void close() {
 		projectGroupContext.close();
 	}
+
+	public int pendingEventsInCurrentContext() {
+		return projectGroupContext.pendingEventsInCurrentContext();
+	}
+
+	public void submitTask(Runnable runnable) {
+		projectGroupContext.submitTask(runnable);
+	}
 }
