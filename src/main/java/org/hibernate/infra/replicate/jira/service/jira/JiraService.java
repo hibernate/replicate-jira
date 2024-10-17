@@ -7,15 +7,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
-import org.hibernate.infra.replicate.jira.ProcessingConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuilder;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
@@ -47,19 +41,12 @@ import jakarta.ws.rs.core.MediaType;
 public class JiraService {
 
 	private final ReportingConfig reportingConfig;
-	private final ExecutorService executor;
-	private final Supplier<Integer> workQueueSize;
 	private final Map<String, HandlerProjectContext> contextPerProject;
 	private final JiraConfig jiraConfig;
 	private final Scheduler scheduler;
 
 	@Inject
-	public JiraService(ProcessingConfig processingConfig, JiraConfig jiraConfig, ReportingConfig reportingConfig,
-			Scheduler scheduler) {
-		LinkedBlockingDeque<Runnable> workQueue = new LinkedBlockingDeque<>(processingConfig.queueSize());
-		workQueueSize = workQueue::size;
-		executor = new ThreadPoolExecutor(processingConfig.threads(), processingConfig.threads(), 0L,
-				TimeUnit.MILLISECONDS, workQueue);
+	public JiraService(JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
 
 		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
 		for (var entry : jiraConfig.projectGroup().entrySet()) {
@@ -158,7 +145,7 @@ public class JiraService {
 				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			executor.submit(() -> {
+			context.submitTask(() -> {
 				for (String issueKey : issueKeys) {
 					triggerSyncEvent(context.sourceJiraClient().getIssue(issueKey), context);
 				}
@@ -176,7 +163,7 @@ public class JiraService {
 				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			executor.submit(() -> syncByQuery(query, context));
+			context.submitTask(() -> syncByQuery(query, context));
 			rc.end();
 		});
 		mi.router().post("/sync/comments/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
@@ -223,7 +210,7 @@ public class JiraService {
 			}
 
 			for (Runnable handler : eventType.handlers(reportingConfig, event, context)) {
-				executor.submit(handler);
+				context.submitTask(handler);
 			}
 		}, () -> Log.infof("Event type %s is not supported and cannot be handled.", event.webhookEvent));
 	}
@@ -254,20 +241,12 @@ public class JiraService {
 
 	@PreDestroy
 	public void finishProcessingAndShutdown() {
-		try {
-			executor.shutdown();
-			if (!executor.awaitTermination(2, TimeUnit.MINUTES)) {
-				Log.infof("Not all events were processed before the shutdown");
+		for (HandlerProjectContext context : contextPerProject.values()) {
+			try {
+				context.close();
+			} catch (Exception e) {
+				Log.errorf(e, "Error closing context %s: %s", context, e.getMessage());
 			}
-			for (HandlerProjectContext context : contextPerProject.values()) {
-				try {
-					context.close();
-				} catch (Exception e) {
-					Log.errorf(e, "Error closing context %s: %s", context, e.getMessage());
-				}
-			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
 		}
 	}
 
@@ -285,7 +264,8 @@ public class JiraService {
 
 	private void triggerSyncEvent(JiraIssue jiraIssue, HandlerProjectContext context) {
 		Log.infof("Adding sync events for a jira issue: %s; Already queued events: %s", jiraIssue.key,
-				workQueueSize.get());
+				context.pendingEventsInCurrentContext());
+
 		JiraWebHookIssue issue = new JiraWebHookIssue();
 		issue.id = jiraIssue.id;
 		issue.key = jiraIssue.key;

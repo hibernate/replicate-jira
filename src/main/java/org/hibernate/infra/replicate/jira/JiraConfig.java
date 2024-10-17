@@ -94,6 +94,24 @@ public interface JiraConfig {
 	}
 
 	interface EventProcessing {
+
+		/**
+		 * Define how many events can be acknowledged and put on the pending queue
+		 * before acknowledging an event results in blocking the response and waiting
+		 * for the queue to free some space.
+		 */
+		@WithDefault("10000")
+		int queueSize();
+
+		/**
+		 * Define the number of threads to use when processing queued events.
+		 * <p>
+		 * Note, having a lot of processing threads might not bring much benefit as
+		 * processing may also be limited by {@link JiraConfig.EventProcessing}
+		 */
+		@WithDefault("2")
+		int threads();
+
 		/**
 		 * Defines how many events can be processed within the
 		 * {@link #timeframeInSeconds() timeframe}
@@ -127,20 +145,20 @@ public interface JiraConfig {
 
 	interface JiraProject {
 		/**
-		 * Downstream project id (not a project key!).
-		 * Use {@code rest/api/2/project/YOUR-PROJECT-ID} to get the info.
+		 * Downstream project id (not a project key!). Use
+		 * {@code rest/api/2/project/YOUR-PROJECT-ID} to get the info.
 		 */
 		String projectId();
 
 		/**
-		 * Downstream project key.
-		 * Use {@code rest/api/2/project/YOUR-PROJECT-ID} to get the info.
+		 * Downstream project key. Use {@code rest/api/2/project/YOUR-PROJECT-ID} to get
+		 * the info.
 		 */
 		String projectKey();
 
 		/**
-		 * Upstream project key.
-		 * Use {@code rest/api/2/project/YOUR-PROJECT-ID} to get the info.
+		 * Upstream project key. Use {@code rest/api/2/project/YOUR-PROJECT-ID} to get
+		 * the info.
 		 */
 		String originalProjectKey();
 
@@ -154,8 +172,9 @@ public interface JiraConfig {
 		/**
 		 * Whether to enable signature verification.
 		 * <p>
-		 * Jira web hooks can send a {@code x-hub-signature} header with a signature of a request body.
-		 * This signature can be then verified using the secret used to configure the web hook.
+		 * Jira web hooks can send a {@code x-hub-signature} header with a signature of
+		 * a request body. This signature can be then verified using the secret used to
+		 * configure the web hook.
 		 */
 		@WithDefault("false")
 		boolean enabled();
