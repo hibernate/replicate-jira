@@ -16,7 +16,7 @@ class LoggingFailureCollector implements FailureCollector {
 
 	@Override
 	public void warning(String details, Exception exception) {
-		Log.warn(details, exception);
+		Log.warnf(exception, details);
 	}
 
 	@Override
@@ -26,7 +26,7 @@ class LoggingFailureCollector implements FailureCollector {
 
 	@Override
 	public void critical(String details, Exception exception) {
-		Log.error(details, exception);
+		Log.errorf(exception, details);
 	}
 
 	@Override

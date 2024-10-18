@@ -138,6 +138,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 				JiraIssueBulkResponse response = destinationJiraClient.create(bulk);
 				response.issues.stream().mapToLong(i -> JiraIssue.keyToLong(i.key)).max()
 						.ifPresent(currentIssueKeyNumber::set);
+				Log.infof(
+						"Created more sync placeholders for %s; Current latest Jira key number is %s while required key is %s",
+						projectName, currentIssueKeyNumber.get(), upToKeyNumber);
 			} while (currentIssueKeyNumber.get() < upToKeyNumber);
 		} finally {
 			lock.unlock();
