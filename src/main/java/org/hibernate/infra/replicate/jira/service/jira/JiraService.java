@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
@@ -109,6 +111,10 @@ public class JiraService {
 			// TODO: we can remove this one once we figure out why POST management does not
 			// work correctly...
 			String project = rc.pathParam("project");
+			List<String> maxToSyncList = rc.queryParam("maxToSync");
+			AtomicInteger maxToSync = maxToSyncList.isEmpty()
+					? null
+					: new AtomicInteger(Integer.parseInt(maxToSyncList.get(0)) + 1);
 
 			HandlerProjectContext context = contextPerProject.get(project);
 
@@ -117,14 +123,14 @@ public class JiraService {
 			}
 
 			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(context.getLargestSyncedJiraIssueKeyNumber());
-
+			BooleanSupplier continueSyncing = maxToSync == null ? () -> true : () -> maxToSync.decrementAndGet() > 0;
 			String identity = "Init Sync for project %s".formatted(project);
 			scheduler.newJob(identity).setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP)
 					// every 10 seconds:
 					.setCron("0/10 * * * * ?").setTask(executionContext -> {
 						Optional<JiraIssue> issueToSync = context
 								.getNextIssueToSync(largestSyncedJiraIssueKeyNumber.get());
-						if (issueToSync.isEmpty()) {
+						if (issueToSync.isEmpty() || !continueSyncing.getAsBoolean()) {
 							scheduler.unscheduleJob(identity);
 						} else {
 							triggerSyncEvent(issueToSync.get(), context);

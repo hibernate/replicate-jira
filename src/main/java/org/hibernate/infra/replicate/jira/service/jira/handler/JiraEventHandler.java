@@ -16,6 +16,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.reporting.FailureCollector;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
+import io.quarkus.logging.Log;
 import jakarta.ws.rs.core.UriBuilder;
 
 public abstract class JiraEventHandler implements Runnable {
@@ -158,6 +159,8 @@ public abstract class JiraEventHandler implements Runnable {
 			Thread.currentThread().interrupt();
 		} finally {
 			failureCollector.close();
+			Log.infof("Pending events in %s to process: %s", context.projectGroupName(),
+					context.pendingEventsInCurrentContext());
 		}
 	}
 
