@@ -154,7 +154,7 @@ class ExportProjectTest {
 
 		if (issue.fields.fixVersions != null) {
 			for (JiraSimpleObject fixVersion : issue.fields.fixVersions) {
-				labels.add("Fix version: %s".formatted(fixVersion.name));
+				labels.add("Fix version: %s".formatted(fixVersion.name).replace(' ', '_'));
 			}
 		}
 
