@@ -156,7 +156,7 @@ public interface JiraRestClient {
 			return new JiraRestException(
 					"Encountered an error calling Jira REST API: %s resulting in: %s".formatted(uri,
 							response.hasEntity() ? response.readEntity(String.class) : "No response body"),
-					response.getStatus());
+					response.getStatus(), response.getHeaders());
 		}
 		return null;
 	}
