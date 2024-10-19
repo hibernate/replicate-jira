@@ -2,6 +2,7 @@ package org.hibernate.infra.replicate.jira.mock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,7 +42,7 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public JiraIssue getIssue(String key) {
 		if (Pattern.compile(itemCannotBeFound.get()).matcher(key).matches()) {
-			throw new JiraRestException("No issue %s".formatted(key), 404);
+			throw new JiraRestException("No issue %s".formatted(key), 404, Map.of());
 		}
 		return sample(1L, key);
 	}
@@ -49,7 +50,7 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public JiraIssue getIssue(Long id) {
 		if (Pattern.compile(itemCannotBeFound.get()).matcher(Long.toString(id)).matches()) {
-			throw new JiraRestException("No issue %s".formatted(id), 404);
+			throw new JiraRestException("No issue %s".formatted(id), 404, Map.of());
 		}
 		return sample(id, jiraKey(id));
 	}
@@ -87,7 +88,7 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public JiraComment getComment(Long issueId, Long commentId) {
 		if (Pattern.compile(itemCannotBeFound.get()).matcher("%d - %d".formatted(issueId, commentId)).matches()) {
-			throw new JiraRestException("No comment %s".formatted(commentId), 404);
+			throw new JiraRestException("No comment %s".formatted(commentId), 404, Map.of());
 		}
 		return sampleComment(issueId, commentId);
 	}
@@ -177,7 +178,9 @@ public class SampleJiraRestClient implements JiraRestClient {
 
 	@Override
 	public JiraIssues find(String query, int startAt, int maxResults) {
-		return new JiraIssues();
+		JiraIssues issues = new JiraIssues();
+		issues.issues = List.of();
+		return issues;
 	}
 
 	@Override

@@ -1,11 +1,29 @@
 package org.hibernate.infra.replicate.jira.service.jira.client;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComments;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulk;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkResponse;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLinkTypes;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueResponse;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 
+import org.jboss.resteasy.reactive.RestResponse;
 import org.jboss.resteasy.reactive.client.api.ClientLogger;
 import org.jboss.resteasy.reactive.client.api.LoggingScope;
 
@@ -15,6 +33,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
+import jakarta.ws.rs.core.Response;
 
 public class JiraRestClientBuilder {
 
@@ -34,7 +53,7 @@ public class JiraRestClientBuilder {
 		if (jira.logRequests()) {
 			builder.clientLogger(CustomClientLogger.INSTANCE).loggingScope(LoggingScope.REQUEST_RESPONSE);
 		}
-		return builder.build(JiraRestClient.class);
+		return new JiraRestClientWithRetry(builder.build(JiraRestClient.class));
 	}
 
 	private static class CustomClientLogger implements ClientLogger {
@@ -102,4 +121,184 @@ public class JiraRestClientBuilder {
 			}
 		}
 	}
+
+	// TODO: remove it once we figure out how to correctly integrate smallrye fault-tolerance
+	//   (simply adding annotations on the REST interface does not work)
+	private static class JiraRestClientWithRetry implements JiraRestClient {
+
+		private final JiraRestClient delegate;
+
+		private JiraRestClientWithRetry(JiraRestClient delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public JiraIssue getIssue(String key) {
+			return withRetry(() -> delegate.getIssue(key));
+		}
+
+		@Override
+		public JiraIssue getIssue(Long id) {
+			return delegate.getIssue(id);
+		}
+
+		@Override
+		public JiraIssueResponse create(JiraIssue issue) {
+			return withRetry(() -> delegate.create(issue));
+		}
+
+		@Override
+		public JiraIssueBulkResponse create(JiraIssueBulk bulk) {
+			return withRetry(() -> delegate.create(bulk));
+		}
+
+		@Override
+		public JiraIssueResponse update(String key, JiraIssue issue) {
+			return withRetry(() -> delegate.update(key, issue));
+		}
+
+		@Override
+		public void upsertRemoteLink(String key, JiraRemoteLink remoteLink) {
+			withRetry(() -> delegate.upsertRemoteLink(key, remoteLink));
+		}
+
+		@Override
+		public JiraComment getComment(Long issueId, Long commentId) {
+			return withRetry(() -> delegate.getComment(issueId, commentId));
+		}
+
+		@Override
+		public JiraComment getComment(String issueKey, Long commentId) {
+			return withRetry(() -> delegate.getComment(issueKey, commentId));
+		}
+
+		@Override
+		public JiraComments getComments(Long issueId, int startAt, int maxResults) {
+			return withRetry(() -> delegate.getComments(issueId, startAt, maxResults));
+		}
+
+		@Override
+		public JiraComments getComments(String issueKey, int startAt, int maxResults) {
+			return withRetry(() -> delegate.getComments(issueKey, startAt, maxResults));
+		}
+
+		@Override
+		public JiraIssueResponse create(String issueKey, JiraComment comment) {
+			return withRetry(() -> delegate.create(issueKey, comment));
+		}
+
+		@Override
+		public JiraIssueResponse update(String issueKey, String commentId, JiraComment comment) {
+			return withRetry(() -> delegate.update(issueKey, commentId, comment));
+		}
+
+		@Override
+		public List<JiraSimpleObject> getPriorities() {
+			return withRetry(delegate::getPriorities);
+		}
+
+		@Override
+		public List<JiraSimpleObject> getIssueTypes() {
+			return withRetry(delegate::getIssueTypes);
+		}
+
+		@Override
+		public List<JiraSimpleObject> getStatues() {
+			return withRetry(delegate::getStatues);
+		}
+
+		@Override
+		public JiraIssueLinkTypes getIssueLinkTypes() {
+			return withRetry(delegate::getIssueLinkTypes);
+		}
+
+		@Override
+		public List<JiraUser> findUser(String email) {
+			return withRetry(() -> delegate.findUser(email));
+		}
+
+		@Override
+		public JiraIssueLink getIssueLink(Long id) {
+			return withRetry(() -> delegate.getIssueLink(id));
+		}
+
+		@Override
+		public void upsertIssueLink(JiraIssueLink link) {
+			withRetry(() -> delegate.upsertIssueLink(link));
+		}
+
+		@Override
+		public void deleteComment(String issueKey, String commentId) {
+			withRetry(() -> delegate.deleteComment(issueKey, commentId));
+		}
+
+		@Override
+		public void deleteIssueLink(String linkId) {
+			withRetry(() -> delegate.deleteIssueLink(linkId));
+		}
+
+		@Override
+		public JiraIssues find(String query, int startAt, int maxResults) {
+			return withRetry(() -> delegate.find(query, startAt, maxResults));
+		}
+
+		@Override
+		public void transition(String issueKey, JiraTransition transition) {
+			withRetry(() -> delegate.transition(issueKey, transition));
+		}
+
+		private static final int RETRIES = 5;
+		private static final Duration WAIT_BETWEEN_RETRIES = Duration.of(2, ChronoUnit.SECONDS);
+
+		private void withRetry(Runnable runnable) {
+			withRetry(() -> {
+				runnable.run();
+				return null;
+			});
+		}
+
+		private <T> T withRetry(Supplier<T> supplier) {
+			for (int i = 0; i < RETRIES; i++) {
+				try {
+					return supplier.get();
+				} catch (RuntimeException exception) {
+					if (!shouldRetryOnException(exception)) {
+						throw exception;
+					}
+				}
+				try {
+					Thread.sleep(WAIT_BETWEEN_RETRIES);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+			throw new IllegalStateException("Shouldn't really reach this far.");
+		}
+
+		private boolean shouldRetryOnException(Throwable throwable) {
+			if (throwable instanceof JiraRestException exception) {
+				if (exception.statusCode() == RestResponse.StatusCode.UNAUTHORIZED
+						|| exception.statusCode() == RestResponse.StatusCode.FORBIDDEN) {
+					Log.warnf(exception,
+							"Will make an attempt to retry the REST API call because of the authentication problem. Response headers %s",
+							exception.headers());
+					return true;
+				}
+				if (exception.statusCode() == RestResponse.StatusCode.NOT_FOUND) {
+					// not found is fine :)
+					Log.warn("Will make no retry attempt of a REST API call for a NOT_FOUND response.");
+					return false;
+				}
+				if (Response.Status.Family.SERVER_ERROR
+						.equals(Response.Status.Family.familyOf(exception.statusCode()))) {
+					Log.warnf(exception,
+							"Will make an attempt to retry the REST API call because of the internal server problem. Response headers %s",
+							exception.headers());
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
 }
