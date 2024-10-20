@@ -122,8 +122,9 @@ public class JiraRestClientBuilder {
 		}
 	}
 
-	// TODO: remove it once we figure out how to correctly integrate smallrye fault-tolerance
-	//   (simply adding annotations on the REST interface does not work)
+	// TODO: remove it once we figure out how to correctly integrate smallrye
+	// fault-tolerance
+	// (simply adding annotations on the REST interface does not work)
 	private static class JiraRestClientWithRetry implements JiraRestClient {
 
 		private final JiraRestClient delegate;
@@ -155,7 +156,7 @@ public class JiraRestClientBuilder {
 		@Override
 		public JiraIssueResponse update(String key, JiraIssue issue) {
 			// it might be that mapped user is wrong so we don't want to keep sending it
-			return withRetry( () -> delegate.update( key, issue ), 2 );
+			return withRetry(() -> delegate.update(key, issue), 2);
 		}
 
 		@Override
@@ -259,7 +260,7 @@ public class JiraRestClientBuilder {
 		}
 
 		private <T> T withRetry(Supplier<T> supplier) {
-			return withRetry( supplier, RETRIES );
+			return withRetry(supplier, RETRIES);
 		}
 
 		private <T> T withRetry(Supplier<T> supplier, int retries) {
@@ -302,6 +303,13 @@ public class JiraRestClientBuilder {
 							"Will make an attempt to retry the REST API call because of the internal server problem. Response headers %s",
 							exception.headers());
 					return true;
+				}
+				if (Response.Status.Family.CLIENT_ERROR.equals(Response.Status.Family.familyOf(exception.statusCode()))
+						&& exception.getMessage().contains("\"assignee\"")) {
+					// we probably were trying to assign to an inactive or incorrectly configured
+					// user and the request failed,
+					// no point in retrying that ...
+					return false;
 				}
 			}
 			return false;

@@ -139,6 +139,21 @@ public class JiraService {
 					}).schedule();
 			rc.end();
 		});
+		mi.router().get("/sync/issues/re-sync/:project/:issue").blockingHandler(rc -> {
+			// TODO: we can remove this one once we figure out why POST management does not
+			// work correctly...
+			String project = rc.pathParam("project");
+			String issue = rc.pathParam("issue");
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			triggerSyncEvent(context.sourceJiraClient().getIssue(issue), context);
+			rc.end();
+		});
 		mi.router().post("/sync/issues/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			// sync issues based on a list of issue-keys supplied in the JSON body:
 			JsonObject request = rc.body().asJsonObject();
