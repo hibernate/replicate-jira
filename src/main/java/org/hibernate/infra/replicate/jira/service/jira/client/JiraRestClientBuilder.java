@@ -258,6 +258,7 @@ public class JiraRestClientBuilder {
 		}
 
 		private <T> T withRetry(Supplier<T> supplier) {
+			RuntimeException e = null;
 			for (int i = 0; i < RETRIES; i++) {
 				try {
 					return supplier.get();
@@ -265,14 +266,15 @@ public class JiraRestClientBuilder {
 					if (!shouldRetryOnException(exception)) {
 						throw exception;
 					}
+					e = exception;
 				}
 				try {
 					Thread.sleep(WAIT_BETWEEN_RETRIES);
-				} catch (InterruptedException e) {
+				} catch (InterruptedException exception) {
 					Thread.currentThread().interrupt();
 				}
 			}
-			throw new IllegalStateException("Shouldn't really reach this far.");
+			throw e;
 		}
 
 		private boolean shouldRetryOnException(Throwable throwable) {
