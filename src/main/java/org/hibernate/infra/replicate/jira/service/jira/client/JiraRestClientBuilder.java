@@ -154,7 +154,8 @@ public class JiraRestClientBuilder {
 
 		@Override
 		public JiraIssueResponse update(String key, JiraIssue issue) {
-			return withRetry(() -> delegate.update(key, issue));
+			// it might be that mapped user is wrong so we don't want to keep sending it
+			return withRetry( () -> delegate.update( key, issue ), 2 );
 		}
 
 		@Override
@@ -258,8 +259,12 @@ public class JiraRestClientBuilder {
 		}
 
 		private <T> T withRetry(Supplier<T> supplier) {
+			return withRetry( supplier, RETRIES );
+		}
+
+		private <T> T withRetry(Supplier<T> supplier, int retries) {
 			RuntimeException e = null;
-			for (int i = 0; i < RETRIES; i++) {
+			for (int i = 0; i < retries; i++) {
 				try {
 					return supplier.get();
 				} catch (RuntimeException exception) {
