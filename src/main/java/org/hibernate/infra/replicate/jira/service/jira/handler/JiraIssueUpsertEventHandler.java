@@ -42,7 +42,19 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		context.createNextPlaceholderBatch(destinationKey);
 
 		try {
-			context.destinationJiraClient().update(destinationKey, issueToCreate(sourceIssue));
+			JiraIssue issue = issueToCreate(sourceIssue);
+			try {
+				context.destinationJiraClient().update(destinationKey, issue);
+			} catch (JiraRestException e) {
+				if (e.getMessage().contains("\"assignee\"")) {
+					failureCollector.warning(
+							"Unable to update issue %s with assignee, will try to update all but assignee field."
+									.formatted(sourceIssue.key),
+							e);
+					issue.fields.assignee = null;
+					context.destinationJiraClient().update(destinationKey, issue);
+				}
+			}
 			// remote "aka web" links cannot be added in the same request and are also not
 			// returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that
