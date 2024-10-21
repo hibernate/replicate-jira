@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuilder;
+import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueSimpleUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueTransitionOnlyEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookIssue;
@@ -169,9 +170,8 @@ public class JiraService {
 			}
 
 			context.submitTask(() -> {
-				syncByQuery(query, context, jiraIssue -> {
-					context.submitTask(new JiraIssueTransitionOnlyEventHandler(reportingConfig, context, jiraIssue));
-				});
+				syncByQuery(query, context, jiraIssue -> context
+						.submitTask(new JiraIssueTransitionOnlyEventHandler(reportingConfig, context, jiraIssue)));
 			});
 			rc.end();
 		});
@@ -206,6 +206,22 @@ public class JiraService {
 			}
 
 			context.submitTask(() -> syncByQuery(query, context));
+			rc.end();
+		});
+		mi.router().get("/sync/issues/query/simple/:project").blockingHandler(rc -> {
+			// syncs only assignee/body, without links comments and transitions
+			JsonObject request = rc.body().asJsonObject();
+			String project = request.getString("project");
+			String query = request.getString("query");
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			syncByQuery(query, context, jiraIssue -> context
+					.submitTask(new JiraIssueSimpleUpsertEventHandler(reportingConfig, context, jiraIssue)));
 			rc.end();
 		});
 		mi.router().post("/sync/comments/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
