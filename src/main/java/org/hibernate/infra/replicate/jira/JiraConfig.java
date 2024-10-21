@@ -3,6 +3,7 @@ package org.hibernate.infra.replicate.jira;
 import java.net.URI;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -241,6 +242,17 @@ public interface JiraConfig {
 		 */
 		@WithDefault("accountId")
 		String mappedPropertyName();
+
+		/**
+		 * By default, if the assignee of the upstream issue is not mapped, the project
+		 * default will be used (i.e. assignee field will not be sent as part of the
+		 * sync request). If the {@code notMappedAssignee} is provided, this value will
+		 * be set as assignee for those issues where an upstream assignee is not mapped
+		 * to a downstream one. This can be useful to show that the issue is assign to
+		 * someone even though that particular user is not present in the downstream
+		 * Jira.
+		 */
+		Optional<String> notMappedAssignee();
 	}
 
 	/**

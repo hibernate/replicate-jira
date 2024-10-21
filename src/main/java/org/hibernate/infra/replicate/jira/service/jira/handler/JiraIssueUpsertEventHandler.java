@@ -43,18 +43,8 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 
 		try {
 			JiraIssue issue = issueToCreate(sourceIssue);
-			try {
-				context.destinationJiraClient().update(destinationKey, issue);
-			} catch (JiraRestException e) {
-				if (e.getMessage().contains("\"assignee\"")) {
-					failureCollector.warning(
-							"Unable to update issue %s with assignee, will try to update all but assignee field."
-									.formatted(sourceIssue.key),
-							e);
-					issue.fields.assignee = null;
-					context.destinationJiraClient().update(destinationKey, issue);
-				}
-			}
+
+			updateIssue(destinationKey, issue, sourceIssue, context.notMappedAssignee());
 			// remote "aka web" links cannot be added in the same request and are also not
 			// returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that
@@ -69,6 +59,29 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		} catch (JiraRestException e) {
 			failureCollector
 					.critical("Unable to update destination issue %s: %s".formatted(destinationKey, e.getMessage()), e);
+		}
+	}
+
+	private void updateIssue(String destinationKey, JiraIssue issue, JiraIssue sourceIssue, JiraUser assignee) {
+		try {
+			context.destinationJiraClient().update(destinationKey, issue);
+		} catch (JiraRestException e) {
+			if (issue.fields.assignee == null) {
+				// if we failed with no assignee then there's no point in retrying ...
+				throw e;
+			}
+			if (e.getMessage().contains("\"assignee\"")) {
+				// let's try updating with the assignee passed to the method (it may be the
+				// "notMappedAssignee")
+				failureCollector.warning(
+						"Unable to update issue %s with assignee %s, will try to update one more time with assignee %s."
+								.formatted(sourceIssue.key, issue.fields.assignee, assignee),
+						e);
+				issue.fields.assignee = assignee;
+				updateIssue(destinationKey, issue, sourceIssue, null);
+			} else {
+				throw e;
+			}
 		}
 	}
 
@@ -135,7 +148,8 @@ public class JiraIssueUpsertEventHandler extends JiraEventHandler {
 		// also the description is going to include a section mentioning who created and
 		// who the issue is assigned to...
 		if (context.projectGroup().canSetReporter()) {
-			destinationIssue.fields.reporter = user(sourceIssue.fields.reporter).map(this::toUser).orElse(null);
+			destinationIssue.fields.reporter = user(sourceIssue.fields.reporter).map(this::toUser)
+					.orElseGet(context::notMappedAssignee);
 		}
 
 		destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser).orElse(null);
