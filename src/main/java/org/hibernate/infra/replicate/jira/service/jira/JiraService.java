@@ -10,10 +10,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuilder;
+import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueTransitionOnlyEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookIssueLink;
@@ -154,6 +156,25 @@ public class JiraService {
 			triggerSyncEvent(context.sourceJiraClient().getIssue(issue), context);
 			rc.end();
 		});
+		mi.router().get("/sync/issues/transition/re-sync/:project").blockingHandler(rc -> {
+			// TODO: we can remove this one once we figure out why POST management does not
+			// work correctly...
+			String project = rc.pathParam("project");
+			String query = rc.queryParam("query").getFirst();
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			context.submitTask(() -> {
+				syncByQuery(query, context, jiraIssue -> {
+					context.submitTask(new JiraIssueTransitionOnlyEventHandler(reportingConfig, context, jiraIssue));
+				});
+			});
+			rc.end();
+		});
 		mi.router().post("/sync/issues/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
 			// sync issues based on a list of issue-keys supplied in the JSON body:
 			JsonObject request = rc.body().asJsonObject();
@@ -272,12 +293,16 @@ public class JiraService {
 	}
 
 	private void syncByQuery(String query, HandlerProjectContext context) {
+		syncByQuery(query, context, jiraIssue -> triggerSyncEvent(jiraIssue, context));
+	}
+
+	private void syncByQuery(String query, HandlerProjectContext context, Consumer<JiraIssue> action) {
 		JiraIssues issues = null;
 		int start = 0;
 		int max = 100;
 		do {
 			issues = context.sourceJiraClient().find(query, start, max);
-			issues.issues.forEach(jiraIssue -> triggerSyncEvent(jiraIssue, context));
+			issues.issues.forEach(action);
 
 			start += max;
 		} while (!issues.issues.isEmpty());
