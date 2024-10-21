@@ -11,6 +11,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulk;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 
 import io.quarkus.logging.Log;
 
@@ -32,6 +33,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final JiraIssueBulk bulk;
 
 	private final String projectKeyWithDash;
+	private final JiraUser notMappedAssignee;
 
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext) {
@@ -44,6 +46,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.currentIssueKeyNumber = new AtomicLong(getCurrentLatestJiraIssueKeyNumber());
 		this.bulk = new JiraIssueBulk(createIssuePlaceholder(), ISSUES_PER_REQUEST);
 		this.projectKeyWithDash = "%s-".formatted(project.projectKey());
+
+		this.notMappedAssignee = projectGroup().users().notMappedAssignee()
+				.map(v -> new JiraUser(projectGroup().users().mappedPropertyName(), v)).orElse(null);
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -149,6 +154,10 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public void startProcessingEvent() throws InterruptedException {
 		projectGroupContext.startProcessingEvent();
+	}
+
+	public JiraUser notMappedAssignee() {
+		return notMappedAssignee;
 	}
 
 	private boolean requiredIssueKeyNumberShouldBeAvailable(Long key) {
