@@ -317,6 +317,8 @@ public class JiraService {
 		int max = 100;
 		do {
 			issues = context.sourceJiraClient().find(query, start, max);
+			Log.infof("Sync by query \"%s\" will try syncing %s issues.",
+					query.substring(0, Math.min(100, query.length())), issues.total);
 			issues.issues.forEach(action);
 
 			start += max;
