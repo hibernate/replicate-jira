@@ -7,6 +7,14 @@ sends it over to the downstream one.
 
 image::assets/images/sync-tool.png[]
 
+== Project group configuration
+
+For the tool to work with Jira it requires some configuration information defined in the
+`org.hibernate.infra.replicate.jira.JiraConfig`. More suggestions on the configuration are provided in the sections below.
+
+The app itself does not come with the project group configuration, and it expects that an additional `application.properties`
+containing the configuration will be provided at runtime.
+
 == Configuring web hooks on the upstream side
 
 In the upstream Jira (the source/original) configure a webhook per project you want to be synced.
@@ -205,6 +213,26 @@ See link:.github/workflows/deploy.yml[].
     Put in there whatever secret configuration you need for your specific cluster.
      +
     In particular, any REST API tokens, management passwords, Web Hook secrets.
+5. Create an `application.properties` with the project group configuration and push it to your config repository.
+Have a simple workflow in that repository to convert the `application.properties` to a ConfigMap on the OpenShift cluster,
+e.g. using next `oc` commands:
++
+[source,yaml]
+----
+# try to create the config map first, but most likely it is already there, if it not a first deploy ever
+oc create configmap <your-config-map-name> --from-file=<relative path within your config repo to>/application.properties || true
+# update the app configuration:
+oc set data configmap/<your-config-map-name> --from-file=<relative path within your config repo to>/application.properties
+----
++
+Make sure to provide the names for the required config maps while building the image through
++
+[source,yaml]
+----
+# here <your-config-map-name> is the name of the ConfigMap containing your application.properties with the project group configuration.
+-Dquarkus.openshift.env.configmaps=<your-config-map-name>,<your-other-config-map-name>... \
+-Dquarkus.openshift.config-map-volumes.app-config.config-map-name=<your-config-map-name> \
+----
 
 == Management endpoints
 
@@ -214,8 +242,11 @@ NOTE: TODO: Need to make sure that POST management endpoints actually work befor
 
 == Local development
 
-Currently, the app is set up to work with two test projects, JIRATEST1/JIRATEST2 at https://hibernate.atlassian.net/.
-Create and add all necessary tokens to your local `.env` file, e.g.:
+To run the app with a dev/prod configuration, create corresponding `application.properties` file, or clone them from
+your app configuration repository and point to it with `-Dquarkus.config.locations=/path/to/your/config/application.properties`.
+
+Most likely this config file will have some env variables for any secrets. To provide values for those, create an `.env`
+file in the root of the repository and add the required variables to it, e.g.:
 
 ----
 JIRA_API_URL_HIBERNATE=https://hibernate.atlassian.net/rest/api/2
