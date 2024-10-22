@@ -116,11 +116,11 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		// also the description is going to include a section mentioning who created and
 		// who the issue is assigned to...
 		if (context.projectGroup().canSetReporter()) {
-			destinationIssue.fields.reporter = user(sourceIssue.fields.reporter).map(this::toUser)
-					.orElseGet(context::notMappedAssignee);
+			destinationIssue.fields.reporter = user(sourceIssue.fields.reporter).map(this::toUser).orElse(null);
 		}
 
-		destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser).orElse(null);
+		destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser)
+				.orElseGet(context::notMappedAssignee);
 
 		return destinationIssue;
 	}
