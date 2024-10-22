@@ -210,9 +210,8 @@ public class JiraService {
 		});
 		mi.router().get("/sync/issues/query/simple/:project").blockingHandler(rc -> {
 			// syncs only assignee/body, without links comments and transitions
-			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString("project");
-			String query = request.getString("query");
+			String project = rc.pathParam("project");
+			String query = rc.queryParam("query").getFirst();
 
 			HandlerProjectContext context = contextPerProject.get(project);
 
