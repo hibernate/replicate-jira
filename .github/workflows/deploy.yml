@@ -20,7 +20,7 @@ concurrency:
 jobs:
   deploy:
 
-    # if: github.repository == 'hibernate/replicate-jira'
+    if: github.repository == 'hibernate/replicate-jira'
 
     runs-on: ubuntu-latest
 
