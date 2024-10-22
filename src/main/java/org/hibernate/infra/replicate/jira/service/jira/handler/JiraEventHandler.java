@@ -159,8 +159,8 @@ public abstract class JiraEventHandler implements Runnable {
 			Thread.currentThread().interrupt();
 		} finally {
 			failureCollector.close();
-			Log.infof("Pending events in %s to process: %s", context.projectGroupName(),
-					context.pendingEventsInCurrentContext());
+			Log.infof("Finished processing %s. Pending events in %s to process: %s", this.toString(),
+					context.projectGroupName(), context.pendingEventsInCurrentContext());
 		}
 	}
 
