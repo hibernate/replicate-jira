@@ -13,7 +13,6 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
@@ -161,8 +160,10 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 	private String prepareDescriptionQuote(JiraIssue issue) {
 		URI issueUri = createJiraIssueUri(issue);
-		URI reporterUri = createJiraUserUri(issue.self, issue.fields.reporter);
-		URI assigneeUri = createJiraUserUri(issue.self, issue.fields.assignee);
+
+		UserData assignee = userData(issue.self, issue.fields.assignee);
+		UserData reporter = userData(issue.self, issue.fields.reporter);
+
 		return """
 				{quote}This issue is created as a copy of [%s|%s].
 
@@ -172,12 +173,8 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 
 				""".formatted(issue.key, issueUri,
-				assigneeUri == null
-						? " Unassigned"
-						: "[user %s|%s]".formatted(JiraTextContent.userIdPart(issue.fields.assignee), assigneeUri),
-				reporterUri == null
-						? " Unknown"
-						: "[user %s|%s]".formatted(JiraTextContent.userIdPart(issue.fields.reporter), reporterUri));
+				assignee == null ? " Unassigned" : "[%s|%s]".formatted(assignee.name(), assignee.uri()),
+				reporter == null ? " Unknown" : "[%s|%s]".formatted(reporter.name(), reporter.uri()));
 	}
 
 }
