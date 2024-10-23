@@ -21,6 +21,7 @@ import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.jboss.resteasy.reactive.server.ServerRequestFilter;
 import org.jboss.resteasy.reactive.server.WithFormRead;
 
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -63,6 +64,7 @@ public class RequestSignatureFilter {
 			String signature = requestContext.getHeaderString("x-hub-signature");
 
 			if (signature == null || !requestContext.hasEntity()) {
+				Log.warnf("Rejecting a web hook event because of the missing signature. Posted to %s", path);
 				return Response.status(401).entity("Invalid request. Missing x-hub-signature header.").build();
 			}
 			try (InputStream entityStream = requestContext.getEntityStream()) {
@@ -70,6 +72,7 @@ public class RequestSignatureFilter {
 
 				final String calculatedSignature = sign(mac, payload);
 				if (!calculatedSignature.equals(signature)) {
+					Log.warnf("Rejecting a web hook event because of the signature mismatch. Posted to %s", path);
 					return Response.status(401).entity("Signatures do not match.").build();
 				}
 				requestContext.setEntityStream(new ByteArrayInputStream(payload));
