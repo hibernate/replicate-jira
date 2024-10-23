@@ -253,6 +253,20 @@ public interface JiraConfig {
 		 * Jira.
 		 */
 		Optional<String> notMappedAssignee();
+
+		/**
+		 * Allows specifying an URL template that will be passed exactly 1 argument
+		 * (mapped user value). E.g. a template can look like
+		 * {@code https://my-jira-server/secure/ViewProfile.jspa?name={arg1}}, where
+		 * {@code arg1} is the mapped user value from {@link #mapping()}. If not
+		 * specified the link to the upstream profile will be created with a template of
+		 * {@code https://my-upstream-jira-server/jira/people/{arg1}}, where
+		 * {@code arg1} is the original user id i.e. the {@link #mapping() mapping key}.
+		 * <p>
+		 * Note, this profile URL only applies to the profiles that have a defined
+		 * {@link #mapping() mapping}.
+		 */
+		Optional<String> profileUrl();
 	}
 
 	/**

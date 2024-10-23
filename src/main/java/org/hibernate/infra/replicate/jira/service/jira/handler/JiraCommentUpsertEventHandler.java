@@ -8,7 +8,6 @@ import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComments;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
@@ -57,12 +56,12 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 
 	private String prepareCommentQuote(JiraIssue issue, JiraComment comment) {
 		URI jiraCommentUri = createJiraCommentUri(issue, comment);
-		URI jiraUserUri = createJiraUserUri(comment.self, comment.author);
+		UserData userData = userData(comment.self, comment.author, "the user %s");
 		String content = """
-				{quote}This [comment|%s] was posted by the [user %s|%s].{quote}
+				{quote}This [comment|%s] was posted by [%s|%s].{quote}
 
 
-				""".formatted(jiraCommentUri, JiraTextContent.userIdPart(comment.author), jiraUserUri);
+				""".formatted(jiraCommentUri, userData.name(), userData.uri());
 		return truncateContent(content);
 	}
 
