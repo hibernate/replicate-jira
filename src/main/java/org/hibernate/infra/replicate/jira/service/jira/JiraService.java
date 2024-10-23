@@ -194,10 +194,10 @@ public class JiraService {
 			});
 			rc.end();
 		});
-		mi.router().post("/sync/issues/query").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
-			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString("project");
-			String query = request.getString("query");
+		mi.router().get("/sync/issues/query/full/:project").blockingHandler(rc -> {
+			// syncs issue with comments, links etc.
+			String project = rc.pathParam("project");
+			String query = rc.queryParam("query").getFirst();
 
 			HandlerProjectContext context = contextPerProject.get(project);
 
