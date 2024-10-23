@@ -12,6 +12,7 @@ import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.reporting.FailureCollector;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
@@ -133,6 +134,38 @@ public abstract class JiraEventHandler implements Runnable {
 				userId -> context.projectGroup().users().mapping().get(sourceUser.accountId)));
 	}
 
+	protected UserData userData(URI someUpstreamUri, JiraUser user) {
+		return userData(someUpstreamUri, user, "user %s");
+	}
+
+	protected UserData userData(URI someUpstreamUri, JiraUser user, String unmappedUserPattern) {
+		if (user == null) {
+			return null;
+		}
+		Optional<String> mappedUser = user(user);
+		URI jiraUserUri;
+		String userName;
+		if (mappedUser.isPresent()) {
+			// means it is one of the users that we've mapped so we would want to point it
+			// to the user on the "downstream" side and also add a name:
+			Optional<String> template = context.projectGroup().users().profileUrl();
+			if (template.isPresent()) {
+				jiraUserUri = UriBuilder.fromUri(template.get()).build(mappedUser.get());
+			} else {
+				jiraUserUri = createJiraUserUri(someUpstreamUri, user);
+			}
+			// NOTE: we are using the upstream username here, so that we do not make an
+			// extra call to get the downstream name. We probably can do that once at the
+			// start and cache it, but for now this should be a "good-enough-approximation".
+			userName = user.displayName;
+
+		} else {
+			jiraUserUri = createJiraUserUri(someUpstreamUri, user);
+			userName = unmappedUserPattern.formatted(JiraTextContent.userIdPart(user));
+		}
+		return new UserData(userName, jiraUserUri);
+	}
+
 	private static Map<String, String> createMapping(List<JiraSimpleObject> source,
 			List<JiraSimpleObject> destination) {
 		Map<String, String> mapping = new HashMap<>();
@@ -189,4 +222,7 @@ public abstract class JiraEventHandler implements Runnable {
 	}
 
 	public abstract String toString();
+
+	protected record UserData(String name, URI uri) {
+	}
 }
