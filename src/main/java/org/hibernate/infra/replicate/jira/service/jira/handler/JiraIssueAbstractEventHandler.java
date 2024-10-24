@@ -129,8 +129,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 	}
 
 	private Optional<JiraTransition> prepareTransition(JiraIssue sourceIssue) {
-		return statusToTransition(sourceIssue.fields.status.id).map(
-				tr -> new JiraTransition(tr, "Upstream issue status updated to: " + sourceIssue.fields.status.name));
+		return statusToTransition(sourceIssue.fields.status.id).map(JiraTransition::new);
 	}
 
 	protected Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {
@@ -169,12 +168,15 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 				Assigned to: %s.
 
-				Reported by: %s.{quote}
+				Reported by: %s.
+
+				Upstream status: %s.{quote}
 
 
 				""".formatted(issue.key, issueUri,
 				assignee == null ? " Unassigned" : "[%s|%s]".formatted(assignee.name(), assignee.uri()),
-				reporter == null ? " Unknown" : "[%s|%s]".formatted(reporter.name(), reporter.uri()));
+				reporter == null ? " Unknown" : "[%s|%s]".formatted(reporter.name(), reporter.uri()),
+				issue.fields.status != null ? issue.fields.status.name : "Unknown");
 	}
 
 }
