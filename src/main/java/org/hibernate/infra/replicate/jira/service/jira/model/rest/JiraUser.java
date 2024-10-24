@@ -21,4 +21,8 @@ public class JiraUser extends JiraBaseObject {
 			properties().put(propertyName, value);
 		}
 	}
+
+	public static JiraUser unassigned(String propertyName) {
+		return new JiraUser(propertyName, null);
+	}
 }
