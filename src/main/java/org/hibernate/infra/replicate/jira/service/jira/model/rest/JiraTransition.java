@@ -13,6 +13,10 @@ public class JiraTransition extends JiraBaseObject {
 	public JiraTransition() {
 	}
 
+	public JiraTransition(String transitionId) {
+		this(transitionId, null);
+	}
+
 	public JiraTransition(String transitionId, String comment) {
 		transition = new JiraIssueTransition(transitionId);
 		if (comment != null && !comment.isBlank()) {
