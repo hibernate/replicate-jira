@@ -121,6 +121,11 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		if (sourceIssue.fields.assignee != null) {
 			destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser)
 					.orElseGet(context::notMappedAssignee);
+		} else {
+			// Because not sending an assignee just does not update it:
+			// See also
+			// https://confluence.atlassian.com/jirakb/how-to-set-assignee-to-unassigned-via-rest-api-in-jira-744721880.html
+			destinationIssue.fields.assignee = JiraUser.unassigned(context.projectGroup().users().mappedPropertyName());
 		}
 
 		return destinationIssue;
