@@ -23,6 +23,13 @@ public class JiraUser extends JiraBaseObject {
 	}
 
 	public static JiraUser unassigned(String propertyName) {
-		return new JiraUser(propertyName, null);
+		// {
+		// "name": "-1"
+		// }
+		// Note: If the name is "-1" default assignee is used.
+		//
+		// Note: we do not send something like "name": null as that will get dropped
+		// from the request and not sent at all.
+		return new JiraUser(propertyName, "-1");
 	}
 }
