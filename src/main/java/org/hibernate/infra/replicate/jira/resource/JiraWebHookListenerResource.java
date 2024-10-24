@@ -24,7 +24,7 @@ public class JiraWebHookListenerResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public String somethingHappened(@RestPath @NotNull /* @ConfiguredProject */ String project,
 			JiraWebHookEvent event) {
-		Log.debugf("Received a notification about %s project: %s", project, event);
+		Log.infof("Received a notification about %s project: %s", project, event);
 		jiraService.acknowledge(project, event);
 		return "ack";
 	}
