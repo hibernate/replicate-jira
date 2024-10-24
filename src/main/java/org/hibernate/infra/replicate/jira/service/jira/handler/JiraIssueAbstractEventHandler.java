@@ -118,8 +118,10 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 			destinationIssue.fields.reporter = user(sourceIssue.fields.reporter).map(this::toUser).orElse(null);
 		}
 
-		destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser)
-				.orElseGet(context::notMappedAssignee);
+		if (sourceIssue.fields.assignee != null) {
+			destinationIssue.fields.assignee = user(sourceIssue.fields.assignee).map(this::toUser)
+					.orElseGet(context::notMappedAssignee);
+		}
 
 		return destinationIssue;
 	}
