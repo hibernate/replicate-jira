@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
@@ -128,6 +129,24 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 			destinationIssue.fields.assignee = JiraUser.unassigned(context.projectGroup().users().mappedPropertyName());
 		}
 
+		if (!isSubTaskIssue(sourceIssue.fields.issuetype) && sourceIssue.fields.parent != null) {
+			if (isEpicIssue(sourceIssue.fields.parent.fields.issuetype)) {
+				JiraConfig.IssueTypeValueMapping issueTypes = context.projectGroup().issueTypes();
+				issueTypes.epicLinkKeyCustomFieldName().ifPresent(epicLinkCustomFieldName -> destinationIssue.fields
+						.properties().put(epicLinkCustomFieldName, toDestinationKey(sourceIssue.fields.parent.key)));
+			}
+		}
+		if (isEpicIssue(sourceIssue.fields.issuetype)) {
+			// Try to set an epic label ... obviously it is a custom field >_< ...
+			JiraConfig.IssueTypeValueMapping issueTypes = context.projectGroup().issueTypes();
+			Object sourceEpicLabel = issueTypes.epicLinkSourceLabelCustomFieldName()
+					.map(sourceIssue.fields.properties()::get).orElse(sourceIssue.fields.summary);
+
+			issueTypes.epicLinkDestinationLabelCustomFieldName()
+					.ifPresent(epicLinkDestinationLabelCustomFieldName -> destinationIssue.fields.properties()
+							.put(epicLinkDestinationLabelCustomFieldName, sourceEpicLabel));
+		}
+
 		return destinationIssue;
 	}
 
@@ -140,7 +159,10 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 	}
 
 	protected Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {
-		if (sourceIssue.fields.parent != null) {
+		// we only add a link for sub-tasks (the ones that have a corresponding types).
+		// Issues assigned to an epic, can also have a parent.
+		// but for those we won't add an extra link:
+		if (sourceIssue.fields.parent != null && isSubTaskIssue(sourceIssue.fields.issuetype)) {
 			String parent = toDestinationKey(sourceIssue.fields.parent.key);
 			// we don't really need it, but as usual we are making sure that the issue is
 			// available downstream:
@@ -162,6 +184,20 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		} else {
 			return Optional.empty();
 		}
+	}
+
+	private boolean isSubTaskIssue(JiraSimpleObject issueType) {
+		if (issueType == null) {
+			return false;
+		}
+		return Boolean.parseBoolean(Objects.toString(issueType.properties().get("subtask"), null));
+	}
+
+	private boolean isEpicIssue(JiraSimpleObject issueType) {
+		if (issueType == null) {
+			return false;
+		}
+		return "epic".equalsIgnoreCase(issueType.name);
 	}
 
 	private String prepareDescriptionQuote(JiraIssue issue) {

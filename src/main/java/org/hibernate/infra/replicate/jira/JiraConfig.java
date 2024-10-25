@@ -61,7 +61,7 @@ public interface JiraConfig {
 		 * Mapping of upstream issue types to downstream ones. Please make sure to
 		 * review your project scheme to see which issue types are available.
 		 */
-		ValueMapping issueTypes();
+		IssueTypeValueMapping issueTypes();
 
 		/**
 		 * Depending on your downstream JIRA permission schema configuration, Service
@@ -232,6 +232,35 @@ public interface JiraConfig {
 		 *         adding an extra link for it.
 		 */
 		String parentLinkType();
+	}
+
+	interface IssueTypeValueMapping extends ValueMapping {
+		/**
+		 * @return the name of the custom field that represents the epic link field.
+		 *         Apparently there is no clean way to attach issues to an epic, and a
+		 *         possible workaround is to use the custom filed (that differs from
+		 *         instance to instance) that represents the Epic link key.
+		 *         <p>
+		 *         A possible alternative could've been <a href=
+		 *         "https://developer.atlassian.com/server/jira/platform/rest/v10000/api-group-epic/#api-agile-1-0-epic-epicidorkey-issue-post">Move
+		 *         issues to a specific epic</a> but it might not be available on all
+		 *         instance types.
+		 *         <p>
+		 *         If value is not provided in the configuration, then tickets will not
+		 *         be linked to epics during the sync.
+		 */
+		Optional<String> epicLinkKeyCustomFieldName();
+
+		/**
+		 * @return The name of a custom field that represents the "epic name" i.e.
+		 *         epic-short-label in the upstream (source) Jira instance.
+		 */
+		Optional<String> epicLinkSourceLabelCustomFieldName();
+		/**
+		 * @return The name of a custom field that represents the "epic name" i.e.
+		 *         epic-short-label in the downstream (destination) Jira instance.
+		 */
+		Optional<String> epicLinkDestinationLabelCustomFieldName();
 	}
 
 	interface UserValueMapping extends ValueMapping {
