@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuilder;
+import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueSimpleUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueTransitionOnlyEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
@@ -155,6 +156,22 @@ public class JiraService {
 			}
 
 			triggerSyncEvent(context.sourceJiraClient().getIssue(issue), context);
+			rc.end();
+		});
+		mi.router().get("/sync/issues/deleted/:project").blockingHandler(rc -> {
+			String project = rc.pathParam("project");
+			String issues = rc.queryParam("issues").getFirst();
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			String[] split = issues.split(",");
+			for (String key : split) {
+				context.submitTask(new JiraIssueDeleteEventHandler(reportingConfig, context, -1L, key));
+			}
 			rc.end();
 		});
 		mi.router().get("/sync/issues/transition/re-sync/:project").blockingHandler(rc -> {

@@ -188,6 +188,11 @@ public class SampleJiraRestClient implements JiraRestClient {
 		// do nothing
 	}
 
+	@Override
+	public void archive(String issueKey) {
+		// do nothing
+	}
+
 	private JiraIssueLink sampleIssueLink(Long id) {
 		try {
 			return objectMapper.readValue("""
