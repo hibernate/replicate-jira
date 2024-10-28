@@ -249,6 +249,11 @@ public class JiraRestClientBuilder {
 			withRetry(() -> delegate.transition(issueKey, transition));
 		}
 
+		@Override
+		public void archive(String issueKey) {
+			withRetry(() -> delegate.archive(issueKey));
+		}
+
 		private static final int RETRIES = 5;
 		private static final Duration WAIT_BETWEEN_RETRIES = Duration.of(2, ChronoUnit.SECONDS);
 
