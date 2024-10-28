@@ -144,6 +144,10 @@ public interface JiraRestClient {
 	@Path("/issue/{issueKey}/transitions")
 	void transition(@PathParam("issueKey") String issueKey, JiraTransition transition);
 
+	@PUT
+	@Path("/issue/{issueKey}/archive")
+	void archive(@PathParam("issueKey") String issueKey);
+
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
 		return defaultObjectMapper.copy().setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY);
