@@ -73,7 +73,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		link.relationship = "Upstream issue";
 		link.object.title = sourceIssue.key;
 		link.object.url = jiraLink;
-		link.object.summary = "Link to an upstream JIRA issue, from which this one was cloned from.";
+		link.object.summary = "Link to an upstream JIRA issue, from which this one was cloned.";
 
 		return link;
 	}
