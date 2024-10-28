@@ -55,7 +55,7 @@ public interface JiraConfig {
 		 * review your project scheme to see which transitions can be used to set the
 		 * desired status.
 		 */
-		ValueMapping statuses();
+		StatusesValueMapping statuses();
 
 		/**
 		 * Mapping of upstream issue types to downstream ones. Please make sure to
@@ -261,6 +261,20 @@ public interface JiraConfig {
 		 *         epic-short-label in the downstream (destination) Jira instance.
 		 */
 		Optional<String> epicLinkDestinationLabelCustomFieldName();
+	}
+
+	interface StatusesValueMapping extends ValueMapping {
+		/**
+		 * @return The name of the resolution to apply to the "Close" transition when
+		 *         closing the issue deleted upstream before archiving it.
+		 */
+		Optional<String> deletedResolution();
+
+		/**
+		 * @return The id of the transition to apply to get the "Close" transition when
+		 *         closing the issue deleted upstream before archiving it.
+		 */
+		Optional<String> deletedTransition();
 	}
 
 	interface UserValueMapping extends ValueMapping {

@@ -1,12 +1,18 @@
 package org.hibernate.infra.replicate.jira.service.jira.handler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraIssueDeleteEventHandler extends JiraEventHandler {
@@ -21,8 +27,7 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 	@Override
 	protected void doRun() {
 		// TODO: do we actually want to delete the issue ? or maybe let's instead add a
-		// label,
-		// and update the summary, saying that the issue is deleted:
+		// label, and update the summary, saying that the issue is deleted:
 
 		// first let's make sure that the issue is actually deleted upstream:
 		try {
@@ -30,34 +35,65 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 			// that such key does not exist, searching by ID may also not find the issue,
 			// but then if the issue is not there we cannot check that the key matches the
 			// ID.
-			context.sourceJiraClient().getIssue(key);
+			JiraIssue issue = context.sourceJiraClient().getIssue(key);
+			if (issue != null && !key.equals(issue.key)) {
+				// means the issue got moved:
+				handleDeletedMovedIssue("MOVED (to %s)".formatted(issue.key));
+				return;
+			}
 
 			// if the issue is deleted then we should get a 404 and never reach this line:
 			failureCollector.critical("Request to delete an issue %s that is actually not deleted".formatted(key));
-			return;
 		} catch (JiraRestException e) {
 			// all good the issue is not available let's mark the other one as deleted now:
-
-			try {
-				String destinationKey = toDestinationKey(key);
-				JiraIssue issue = context.destinationJiraClient().getIssue(destinationKey);
-				JiraIssue updated = new JiraIssue();
-
-				updated.fields = new JiraFields();
-				updated.fields.summary = "DELETED upstream: " + issue.fields.summary;
-				if (issue.fields.labels == null) {
-					issue.fields.labels = List.of();
-				}
-				ArrayList<String> updatedLabels = new ArrayList<>(issue.fields.labels);
-				updatedLabels.add("Deleted Upstream");
-				updated.fields.labels = updatedLabels;
-
-				context.destinationJiraClient().update(destinationKey, updated);
-			} catch (Exception ex) {
-				failureCollector.critical(
-						"Unable to mark the issue %s as deleted: %s".formatted(objectId, ex.getMessage()), ex);
-			}
+			handleDeletedMovedIssue("DELETED");
 		}
+	}
+
+	private void handleDeletedMovedIssue(String type) {
+		try {
+			String destinationKey = toDestinationKey(key);
+			JiraIssue issue = context.destinationJiraClient().getIssue(destinationKey);
+			JiraIssue updated = new JiraIssue();
+
+			updated.fields = new JiraFields();
+			updated.fields.summary = "%s upstream: %s".formatted(type, issue.fields.summary);
+			if (issue.fields.labels == null) {
+				issue.fields.labels = List.of();
+			}
+			Set<String> updatedLabels = new HashSet<>(issue.fields.labels);
+			updatedLabels.add("deleted_upstream");
+			updated.fields.labels = new ArrayList<>(updatedLabels);
+			updated.fields.priority = null;
+			updated.fields.issuetype = null;
+			updated.fields.project = null;
+
+			context.destinationJiraClient().update(destinationKey, updated);
+
+			prepareTransition()
+					.ifPresent(transition -> context.destinationJiraClient().transition(destinationKey, transition));
+
+			context.destinationJiraClient().archive(destinationKey);
+		} catch (Exception ex) {
+			failureCollector.critical("Unable to mark the issue %s as deleted: %s".formatted(objectId, ex.getMessage()),
+					ex);
+		}
+	}
+
+	private Optional<JiraTransition> prepareTransition() {
+		Optional<String> deletedTransition = context.projectGroup().statuses().deletedTransition();
+		if (deletedTransition.isPresent()) {
+			JiraTransition transition = new JiraTransition();
+			transition.transition = new JiraIssueTransition(deletedTransition.get());
+
+			Optional<String> deletedResolution = context.projectGroup().statuses().deletedResolution();
+			deletedResolution.ifPresent(
+					name -> transition.properties().put("fields", Map.of("resolution", Map.of("name", name))));
+
+			return Optional.of(transition);
+		}
+
+		return Optional.empty();
 	}
 
 	@Override
