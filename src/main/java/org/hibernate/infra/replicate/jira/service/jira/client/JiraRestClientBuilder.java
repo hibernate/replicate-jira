@@ -316,6 +316,12 @@ public class JiraRestClientBuilder {
 					// no point in retrying that ...
 					return false;
 				}
+				if (Response.Status.TOO_MANY_REQUESTS.getStatusCode() == exception.statusCode()) {
+					// we probably were trying to assign to an inactive or incorrectly configured
+					// user and the request failed,
+					// no point in retrying that ...
+					return false;
+				}
 			}
 			return false;
 		}
