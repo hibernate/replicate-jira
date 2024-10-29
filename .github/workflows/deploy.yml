@@ -78,7 +78,7 @@ jobs:
             -Drevision="${{ steps.app-version.outputs.value }}" \
             -Dquarkus.container-image.build=true \
             -Dquarkus.container-image.push=true \
-            -Dquarkus.container-image.registry="$(oc registry info)" \
+            -Dquarkus.container-image.registry="$(oc get imagestream -o json | jq -r '.items[0].status.publicDockerImageRepository' | awk -F"[/]" '{print $1}')" \
             -Dquarkus.container-image.group="$(oc project --short)" \
             -Dquarkus.container-image.additional-tags=latest  
 
