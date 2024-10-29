@@ -260,6 +260,36 @@ JIRA_API_TOKEN_REDHAT=your-PAT
 
 We also use https://smee.io/ to get web hooks delivered to the local env.
 
+== Troubleshooting
+
+Sometimes attempting to make REST requests to Jira API may result in an `Internal Server Error` without much additional
+details, e.g.:
+[source,json]
+----
+{
+    "errorMessages": [
+        "Internal server error"
+    ],
+    "errors": {}
+}
+----
+
+If the request constantly fails even after several retries, it most likely mean that the request contains some fields
+that are not present on the "view" the rest request is trying to update. To help track down the reason behind it:
+
+- Enable the request/response logging for a particular rest client (most likely for the "destination" one):
++
+[source,json]
+----
+jira.project-group."<your-project-group-name>".destination.log-requests=true
+----
++
+- Get the request body of the failing request
+- Use your favorite tool for sending REST requests to send a failing request "manually"
+- Start removing any fields from the JSON that are "optional" and send requests with modified JSON
+  * Keep doing so until you identify the field causing the problem
+
+
 [[license]]
 == License
 
