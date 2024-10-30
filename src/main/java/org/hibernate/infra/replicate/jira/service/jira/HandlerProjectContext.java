@@ -1,5 +1,6 @@
 package org.hibernate.infra.replicate.jira.service.jira;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,8 +36,11 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final String projectKeyWithDash;
 	private final JiraUser notMappedAssignee;
 
+	private final Map<String, HandlerProjectContext> allProjectsContextMap;
+
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
-			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext) {
+			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext,
+			Map<String, HandlerProjectContext> allProjectsContextMap) {
 		this.projectName = projectName;
 		this.projectGroupName = projectGroupName;
 		this.sourceJiraClient = sourceJiraClient;
@@ -49,6 +53,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 		this.notMappedAssignee = projectGroup().users().notMappedAssignee()
 				.map(v -> new JiraUser(projectGroup().users().mappedPropertyName(), v)).orElse(null);
+
+		this.allProjectsContextMap = allProjectsContextMap;
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -202,5 +208,13 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public void submitTask(Runnable runnable) {
 		projectGroupContext.submitTask(runnable);
+	}
+
+	public Optional<HandlerProjectContext> contextForProjectInSameGroup(String project) {
+		if (!projectGroup().projects().containsKey(project)) {
+			// different project group, don't bother
+			return Optional.empty();
+		}
+		return Optional.ofNullable(allProjectsContextMap.get(project));
 	}
 }

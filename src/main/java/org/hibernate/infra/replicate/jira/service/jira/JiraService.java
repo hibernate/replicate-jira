@@ -53,15 +53,14 @@ public class JiraService {
 
 	@Inject
 	public JiraService(JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
-
 		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
 		for (var entry : jiraConfig.projectGroup().entrySet()) {
 			JiraRestClient source = JiraRestClientBuilder.of(entry.getValue().source());
 			JiraRestClient destination = JiraRestClientBuilder.of(entry.getValue().destination());
 			HandlerProjectGroupContext groupContext = new HandlerProjectGroupContext(entry.getValue());
 			for (var project : entry.getValue().projects().entrySet()) {
-				contextMap.put(project.getKey(),
-						new HandlerProjectContext(project.getKey(), entry.getKey(), source, destination, groupContext));
+				contextMap.put(project.getKey(), new HandlerProjectContext(project.getKey(), entry.getKey(), source,
+						destination, groupContext, contextMap));
 			}
 		}
 
