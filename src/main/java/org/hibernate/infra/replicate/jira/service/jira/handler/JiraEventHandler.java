@@ -221,6 +221,11 @@ public abstract class JiraEventHandler implements Runnable {
 		return key;
 	}
 
+	protected String toProjectFromKey(String key) {
+		int index = key.lastIndexOf('-');
+		return index > 0 ? key.substring(0, index) : null;
+	}
+
 	public abstract String toString();
 
 	protected record UserData(String name, URI uri) {
