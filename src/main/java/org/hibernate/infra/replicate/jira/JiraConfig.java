@@ -232,6 +232,19 @@ public interface JiraConfig {
 		 *         adding an extra link for it.
 		 */
 		String parentLinkType();
+
+		/**
+		 * @return the name to be set as a part of the remote link request in the
+		 *         `application` object i.e. the name of "remote jira" as configured on
+		 *         your server.
+		 */
+		Optional<String> applicationNameForRemoteLinkType();
+
+		/**
+		 * @return the appId to be used to create a globalId for a remote link, e.g.:
+		 *         {@code "globalId": "appId=5e7d6222-8225-3bcd-be58-5fe3980b0fae&issueId=65806"}
+		 */
+		Optional<String> applicationIdForRemoteLinkType();
 	}
 
 	interface IssueTypeValueMapping extends ValueMapping {

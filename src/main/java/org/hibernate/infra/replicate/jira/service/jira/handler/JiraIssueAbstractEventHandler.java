@@ -63,18 +63,23 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 		JiraRemoteLink link = new JiraRemoteLink();
 		// >> Setting this field enables the remote issue link details to be updated or
-		// deleted using remote system
-		// >> and item details as the record identifier, rather than using the record's
-		// Jira ID.
+		// >> deleted using remote system and item details as the record identifier,
+		// >> rather than using the record's Jira ID.
 		//
-		// Hence, we set this global id as a link to the issue, this way it should be
-		// unique enough and easy to create:
-		link.globalId = jiraLink.toString();
+		// And if the appid/names are available then we can make it also look as if it
+		// is not a remote link:
+
+		Optional<String> appId = context.projectGroup().issueLinkTypes().applicationIdForRemoteLinkType();
+		link.globalId = appId.map(s -> "appId=%s&issueId=%s".formatted(s, sourceIssue.id))
+				.orElseGet(jiraLink::toString);
+
 		link.relationship = "Upstream issue";
 		link.object.title = sourceIssue.key;
 		link.object.url = jiraLink;
 		link.object.summary = "Link to an upstream JIRA issue, from which this one was cloned.";
 
+		Optional<String> applicationName = context.projectGroup().issueLinkTypes().applicationNameForRemoteLinkType();
+		link.application = applicationName.map(JiraRemoteLink.Application::new).orElse(null);
 		return link;
 	}
 
