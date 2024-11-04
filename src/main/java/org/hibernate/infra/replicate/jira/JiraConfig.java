@@ -110,6 +110,12 @@ public interface JiraConfig {
 		 */
 		@WithDefault("upstream-%s")
 		String labelTemplate();
+
+		/**
+		 * Specify how {@link java.time.ZonedDateTime} is formatted to string.
+		 */
+		@WithDefault("EEEE, MMMM dd, yyyy 'at' HH:mm:ss z(Z)")
+		String timestampFormat();
 	}
 
 	interface EventProcessing {
