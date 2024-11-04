@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
@@ -20,6 +21,8 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
+	private static final Pattern FIX_VERSION_PATTERN = Pattern.compile("Fix_version:.++");
+
 	public JiraIssueAbstractEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
 		super(reportingConfig, context, id);
 	}
@@ -30,7 +33,8 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 	}
 
 	protected void updateIssueBody(JiraIssue sourceIssue, String destinationKey) {
-		JiraIssue issue = issueToCreate(sourceIssue);
+		JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
+		JiraIssue issue = issueToCreate(sourceIssue, destIssue);
 
 		updateIssue(destinationKey, issue, sourceIssue, context.notMappedAssignee());
 	}
@@ -83,7 +87,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		return link;
 	}
 
-	protected JiraIssue issueToCreate(JiraIssue sourceIssue) {
+	protected JiraIssue issueToCreate(JiraIssue sourceIssue, JiraIssue downstreamIssue) {
 		JiraIssue destinationIssue = new JiraIssue();
 		destinationIssue.fields = new JiraFields();
 
@@ -93,17 +97,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 				Objects.toString(sourceIssue.fields.description, ""));
 		destinationIssue.fields.description = truncateContent(destinationIssue.fields.description);
 
-		destinationIssue.fields.labels = sourceIssue.fields.labels;
-		// let's also add fix versions to the labels
-		if (sourceIssue.fields.fixVersions != null) {
-			if (destinationIssue.fields.labels == null) {
-				destinationIssue.fields.labels = List.of();
-			}
-			destinationIssue.fields.labels = new ArrayList<>(destinationIssue.fields.labels);
-			for (JiraSimpleObject fixVersion : sourceIssue.fields.fixVersions) {
-				destinationIssue.fields.labels.add("Fix version:%s".formatted(fixVersion.name).replace(' ', '_'));
-			}
-		}
+		destinationIssue.fields.labels = prepareLabels(sourceIssue, downstreamIssue);
 
 		// if we can map the priority - great we'll do that, if no: we'll keep it blank
 		// and let Jira use its default instead:
@@ -153,6 +147,38 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		}
 
 		return destinationIssue;
+	}
+
+	private List<String> prepareLabels(JiraIssue sourceIssue, JiraIssue downstreamIssue) {
+		List<String> labelsToSet = new ArrayList<>();
+
+		for (String label : sourceIssue.fields.labels) {
+			labelsToSet.add(asUpstreamLabel(label));
+		}
+
+		// let's also add fix versions to the labels
+		if (sourceIssue.fields.fixVersions != null) {
+			for (JiraSimpleObject fixVersion : sourceIssue.fields.fixVersions) {
+				String fixVersionLabel = "Fix version:%s".formatted(fixVersion.name).replace(' ', '_');
+				labelsToSet.add(fixVersionLabel);
+			}
+		}
+
+		for (String label : downstreamIssue.fields.labels) {
+			if (!(context.isSourceLabel(label) || isFixVersion(label))) {
+				labelsToSet.add(label);
+			}
+		}
+
+		return labelsToSet;
+	}
+
+	private boolean isFixVersion(String label) {
+		return FIX_VERSION_PATTERN.matcher(label).matches();
+	}
+
+	private String asUpstreamLabel(String label) {
+		return context.projectGroup().formatting().labelTemplate().formatted(label);
 	}
 
 	private JiraUser toUser(String value) {
