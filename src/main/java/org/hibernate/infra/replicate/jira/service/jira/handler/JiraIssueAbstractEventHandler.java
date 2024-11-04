@@ -244,13 +244,19 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 				Reported by: %s.
 
-				Upstream status: %s.{quote}
+				Upstream status: %s.
+
+				Created: %s.
+
+				Last updated: %s.{quote}
 
 
 				""".formatted(issue.key, issueUri,
 				assignee == null ? " Unassigned" : "[%s|%s]".formatted(assignee.name(), assignee.uri()),
 				reporter == null ? " Unknown" : "[%s|%s]".formatted(reporter.name(), reporter.uri()),
-				issue.fields.status != null ? issue.fields.status.name : "Unknown");
+				issue.fields.status != null ? issue.fields.status.name : "Unknown",
+				context.formatTimestamp(issue.fields.created),
+				context.formatTimestamp(issue.fields.updated != null ? issue.fields.updated : issue.fields.created));
 	}
 
 }

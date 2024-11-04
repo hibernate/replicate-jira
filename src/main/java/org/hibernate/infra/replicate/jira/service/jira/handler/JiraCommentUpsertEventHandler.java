@@ -57,11 +57,19 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 	private String prepareCommentQuote(JiraIssue issue, JiraComment comment) {
 		URI jiraCommentUri = createJiraCommentUri(issue, comment);
 		UserData userData = userData(comment.self, comment.author, "the user %s");
+		UserData editUserData = userData(comment.self, comment.updateAuthor, "the user %s");
 		String content = """
-				{quote}This [comment|%s] was posted by [%s|%s].{quote}
+				{quote}This [comment|%s] was posted by [%s|%s] on %s.%s{quote}
 
 
-				""".formatted(jiraCommentUri, userData.name(), userData.uri());
+				""".formatted(jiraCommentUri, userData.name(), userData.uri(), context.formatTimestamp(comment.created),
+				comment.isUpdatedSameAsCreated()
+						? ""
+						: """
+
+								[%s|%s] edited the comment on %s.
+								""".formatted(editUserData.name(), editUserData.uri(),
+								context.formatTimestamp(comment.updated)));
 		return truncateContent(content);
 	}
 
