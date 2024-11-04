@@ -92,6 +92,24 @@ public interface JiraConfig {
 		 * for the timeframe to end and will get process
 		 */
 		EventProcessing processing();
+
+		/**
+		 * Allows customizing formatting options.
+		 */
+		Formatting formatting();
+	}
+
+	interface Formatting {
+
+		/**
+		 * Specify how the label is formatted for a downstream issue.
+		 * <p>
+		 * Template receives a single String token that is an upstream label. {@code %s}
+		 * <b>must</b> be used in the template as it will be replaced by a {@code .+}
+		 * regex to find matches in the already synced labels.
+		 */
+		@WithDefault("upstream-%s")
+		String labelTemplate();
 	}
 
 	interface EventProcessing {

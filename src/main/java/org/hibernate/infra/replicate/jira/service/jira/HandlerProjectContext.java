@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
@@ -37,6 +38,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final JiraUser notMappedAssignee;
 
 	private final Map<String, HandlerProjectContext> allProjectsContextMap;
+	private final Pattern sourceLabelPattern;
 
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext,
@@ -55,6 +57,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 				.map(v -> new JiraUser(projectGroup().users().mappedPropertyName(), v)).orElse(null);
 
 		this.allProjectsContextMap = allProjectsContextMap;
+		this.sourceLabelPattern = Pattern
+				.compile(projectGroupContext.projectGroup().formatting().labelTemplate().formatted(".+"));
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -216,5 +220,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 			return Optional.empty();
 		}
 		return Optional.ofNullable(allProjectsContextMap.get(project));
+	}
+
+	public boolean isSourceLabel(String label) {
+		return sourceLabelPattern.matcher(label).matches();
 	}
 }
