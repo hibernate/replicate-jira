@@ -1,5 +1,7 @@
 package org.hibernate.infra.replicate.jira.service.jira;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +41,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	private final Map<String, HandlerProjectContext> allProjectsContextMap;
 	private final Pattern sourceLabelPattern;
+	private final DateTimeFormatter formatter;
 
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext,
@@ -59,6 +62,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.allProjectsContextMap = allProjectsContextMap;
 		this.sourceLabelPattern = Pattern
 				.compile(projectGroupContext.projectGroup().formatting().labelTemplate().formatted(".+"));
+		this.formatter = DateTimeFormatter.ofPattern(projectGroupContext.projectGroup().formatting().timestampFormat());
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -224,5 +228,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public boolean isSourceLabel(String label) {
 		return sourceLabelPattern.matcher(label).matches();
+	}
+
+	public String formatTimestamp(ZonedDateTime time) {
+		return time != null ? time.format(formatter) : "";
 	}
 }

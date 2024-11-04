@@ -1,5 +1,6 @@
 package org.hibernate.infra.replicate.jira.service.jira.model.rest;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import org.hibernate.infra.replicate.jira.service.jira.model.JiraBaseObject;
@@ -22,6 +23,8 @@ public class JiraFields extends JiraBaseObject {
 	public List<JiraIssueLink> issuelinks;
 	public JiraComments comment;
 	public JiraIssue parent;
+	public ZonedDateTime created;
+	public ZonedDateTime updated;
 
 	@Override
 	public String toString() {
