@@ -3,8 +3,10 @@ package org.hibernate.infra.replicate.jira.service.jira.handler;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
@@ -28,12 +30,27 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 	}
 
 	protected void applyTransition(JiraIssue sourceIssue, String destinationKey) {
+		JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
+		applyTransition(sourceIssue, destIssue, destinationKey);
+	}
+
+	protected void applyTransition(JiraIssue sourceIssue, JiraIssue destIssue, String destinationKey) {
+		Set<String> statusesToIgnore = context.projectGroup().statuses().ignoreTransitionCondition()
+				.getOrDefault(sourceIssue.fields.status.name.toLowerCase(Locale.ROOT).replace(' ', '-'), Set.of());
+		if (statusesToIgnore.contains(destIssue.fields.status.name.toLowerCase(Locale.ROOT))) {
+			// no need to apply the transition :)
+			return;
+		}
 		prepareTransition(sourceIssue).ifPresent(
 				jiraTransition -> context.destinationJiraClient().transition(destinationKey, jiraTransition));
 	}
 
 	protected void updateIssueBody(JiraIssue sourceIssue, String destinationKey) {
 		JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
+		updateIssueBody(sourceIssue, destIssue, destinationKey);
+	}
+
+	protected void updateIssueBody(JiraIssue sourceIssue, JiraIssue destIssue, String destinationKey) {
 		JiraIssue issue = issueToCreate(sourceIssue, destIssue);
 
 		updateIssue(destinationKey, issue, sourceIssue, context.notMappedAssignee());
