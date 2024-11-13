@@ -29,14 +29,16 @@ public class JiraIssueUpsertEventHandler extends JiraIssueAbstractEventHandler {
 		context.createNextPlaceholderBatch(destinationKey);
 
 		try {
-			updateIssueBody(sourceIssue, destinationKey);
+			JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
+
+			updateIssueBody(sourceIssue, destIssue, destinationKey);
 			// remote "aka web" links cannot be added in the same request and are also not
 			// returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that
 			// triggered the sync with an additional call:
 			context.destinationJiraClient().upsertRemoteLink(destinationKey, remoteSelfLink(sourceIssue));
 			// issue status can be updated only through transition:
-			applyTransition(sourceIssue, destinationKey);
+			applyTransition(sourceIssue, destIssue, destinationKey);
 			// and then we want to add a link to a parent, if the issue was actually a
 			// sub-task which we've created as a task:
 			prepareParentLink(destinationKey, sourceIssue).ifPresent(context.destinationJiraClient()::upsertIssueLink);
