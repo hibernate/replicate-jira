@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -293,6 +294,7 @@ public interface JiraConfig {
 		 *         epic-short-label in the upstream (source) Jira instance.
 		 */
 		Optional<String> epicLinkSourceLabelCustomFieldName();
+
 		/**
 		 * @return The name of a custom field that represents the "epic name" i.e.
 		 *         epic-short-label in the downstream (destination) Jira instance.
@@ -312,6 +314,23 @@ public interface JiraConfig {
 		 *         closing the issue deleted upstream before archiving it.
 		 */
 		Optional<String> deletedTransition();
+
+		/**
+		 * @return A map where the {@code key} is the upstream status name, and the
+		 *         corresponding {@code value} contains the names of the downstream
+		 *         status names. If the downstream issue is currently in one of the
+		 *         statuses present in the value set then the transition for status
+		 *         ({@code key}) should not be applied.
+		 *         <p>
+		 *         This allows both skipping unnecessary transitions
+		 *         {@code "status a" -> "status a" } as well as to keep the downstream
+		 *         issue in the status modified downstream if it is within the "group"
+		 *         of statuses "mapped" to the upstream one. This can be useful when
+		 *         e.g. downstream workflow has both {@code New} and {@code Ready}
+		 *         statuses, and users move new issues to the {@code Ready} status
+		 *         issues downstream, without an override from an upstream updates.
+		 */
+		Map<String, Set<String>> ignoreTransitionCondition();
 	}
 
 	interface UserValueMapping extends ValueMapping {
