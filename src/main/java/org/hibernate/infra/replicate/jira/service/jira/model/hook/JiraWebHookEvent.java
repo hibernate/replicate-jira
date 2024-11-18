@@ -19,6 +19,7 @@ public class JiraWebHookEvent extends JiraBaseObject {
 	public JiraWebHookObject comment;
 	public JiraWebHookIssue issue;
 	public JiraWebHookIssueLink issueLink;
+	public JiraWebHookObject version;
 
 	public Optional<JiraWebhookEventType> eventType() {
 		return JiraWebhookEventType.of(webhookEvent);
@@ -27,6 +28,6 @@ public class JiraWebHookEvent extends JiraBaseObject {
 	@Override
 	public String toString() {
 		return "JiraWebHookEvent{" + "webhookEvent='" + webhookEvent + '\'' + ", comment=" + comment + ", issue="
-				+ issue + ", otherProperties=" + properties() + '}';
+				+ issue + ", otherProperties=" + properties() + ", version=" + version + '}';
 	}
 }
