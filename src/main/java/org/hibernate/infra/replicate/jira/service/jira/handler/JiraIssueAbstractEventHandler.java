@@ -19,6 +19,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
@@ -163,6 +164,15 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 							.put(epicLinkDestinationLabelCustomFieldName, sourceEpicLabel));
 		}
 
+		if (sourceIssue.fields.fixVersions != null) {
+			destinationIssue.fields.fixVersions = new ArrayList<>();
+			for (JiraVersion fix : sourceIssue.fields.fixVersions) {
+				JiraVersion version = new JiraVersion();
+				version.name = fix.name;
+				destinationIssue.fields.fixVersions.add(version);
+			}
+		}
+
 		return destinationIssue;
 	}
 
@@ -175,7 +185,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 		// let's also add fix versions to the labels
 		if (sourceIssue.fields.fixVersions != null) {
-			for (JiraSimpleObject fixVersion : sourceIssue.fields.fixVersions) {
+			for (JiraVersion fixVersion : sourceIssue.fields.fixVersions) {
 				String fixVersionLabel = "Fix version:%s".formatted(fixVersion.name).replace(' ', '_');
 				labelsToSet.add(fixVersionLabel);
 			}
