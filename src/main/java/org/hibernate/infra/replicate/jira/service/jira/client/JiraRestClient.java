@@ -16,6 +16,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -147,6 +148,22 @@ public interface JiraRestClient {
 	@PUT
 	@Path("/issue/{issueKey}/archive")
 	void archive(@PathParam("issueKey") String issueKey);
+
+	@GET
+	@Path("/version/{id}")
+	JiraVersion version(@PathParam("id") Long id);
+
+	@GET
+	@Path("/project/{projectKey}/versions")
+	List<JiraVersion> versions(@PathParam("projectKey") String projectKey);
+
+	@POST
+	@Path("/version")
+	JiraVersion create(JiraVersion version);
+
+	@PUT
+	@Path("/version/{id}")
+	JiraVersion update(@PathParam("id") String id, JiraVersion version);
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {

@@ -14,6 +14,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTextContent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 import org.hibernate.infra.replicate.jira.service.reporting.FailureCollector;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
@@ -45,6 +46,13 @@ public abstract class JiraEventHandler implements Runnable {
 		// https://hibernate.atlassian.net/browse/JIRATEST1-1?focusedCommentId=116651
 		return UriBuilder.fromUri(issue.self).replacePath("browse").path(issue.key).replaceQuery("")
 				.queryParam("focusedCommentId", comment.id).build();
+	}
+
+	protected static URI createJiraVersionUri(JiraVersion version) {
+		// e.g.
+		// https://hibernate.atlassian.net/projects/HSEARCH/versions/32220
+		return UriBuilder.fromUri(version.self).replacePath("projects").path(version.projectId).path("versions")
+				.path(version.id).replaceQuery("").build();
 	}
 
 	protected static URI createJiraUserUri(URI someJiraUri, JiraUser user) {
