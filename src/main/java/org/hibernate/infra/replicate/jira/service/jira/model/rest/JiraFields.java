@@ -17,7 +17,7 @@ public class JiraFields extends JiraBaseObject {
 
 	public JiraUser assignee;
 	public JiraUser reporter;
-	public List<JiraSimpleObject> fixVersions;
+	public List<JiraVersion> fixVersions;
 	// NOTE: this one is for "read-only" purposes, to create links a different API
 	// has to be used
 	public List<JiraIssueLink> issuelinks;
