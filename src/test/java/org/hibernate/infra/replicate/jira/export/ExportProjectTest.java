@@ -13,7 +13,7 @@ import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClient;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuilder;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -153,7 +153,7 @@ class ExportProjectTest {
 		}
 
 		if (issue.fields.fixVersions != null) {
-			for (JiraSimpleObject fixVersion : issue.fields.fixVersions) {
+			for (JiraVersion fixVersion : issue.fields.fixVersions) {
 				labels.add("Fix version: %s".formatted(fixVersion.name).replace(' ', '_'));
 			}
 		}
