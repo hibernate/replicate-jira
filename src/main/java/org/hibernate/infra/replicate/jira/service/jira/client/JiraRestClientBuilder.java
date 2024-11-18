@@ -22,6 +22,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import org.jboss.resteasy.reactive.RestResponse;
 import org.jboss.resteasy.reactive.client.api.ClientLogger;
@@ -252,6 +253,26 @@ public class JiraRestClientBuilder {
 		@Override
 		public void archive(String issueKey) {
 			withRetry(() -> delegate.archive(issueKey));
+		}
+
+		@Override
+		public JiraVersion version(Long id) {
+			return withRetry(() -> delegate.version(id));
+		}
+
+		@Override
+		public List<JiraVersion> versions(String projectKey) {
+			return withRetry(() -> delegate.versions(projectKey));
+		}
+
+		@Override
+		public JiraVersion create(JiraVersion version) {
+			return withRetry(() -> delegate.create(version));
+		}
+
+		@Override
+		public JiraVersion update(String id, JiraVersion version) {
+			return withRetry(() -> delegate.update(id, version));
 		}
 
 		private static final int RETRIES = 5;

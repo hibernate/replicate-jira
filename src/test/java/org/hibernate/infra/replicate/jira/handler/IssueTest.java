@@ -17,6 +17,7 @@ import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueDeleteEv
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueLinkDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueLinkUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueUpsertEventHandler;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 import org.junit.jupiter.api.AfterEach;
@@ -72,7 +73,7 @@ class IssueTest {
 		// - the downstream issue is updated,
 		// - web link added pointing to the issue
 		// - transition is performed
-		Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any());
+		Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any(JiraIssue.class));
 		Mockito.verify(destination, Mockito.times(1)).upsertRemoteLink(eq("JIRATEST2-1"), any());
 		Mockito.verify(destination, Mockito.times(1)).transition(eq("JIRATEST2-1"), any());
 	}
@@ -103,7 +104,7 @@ class IssueTest {
 			// - we called the source jira and it throws 404
 			// - destination jira is updated (title)
 			Mockito.verify(source, Mockito.times(1)).getIssue(eq("JIRATEST1-1"));
-			Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any());
+			Mockito.verify(destination, Mockito.times(1)).update(eq("JIRATEST2-1"), any(JiraIssue.class));
 		} finally {
 			source.itemCannotBeFound.set("");
 		}

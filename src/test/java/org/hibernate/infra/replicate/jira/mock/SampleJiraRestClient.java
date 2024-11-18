@@ -3,6 +3,7 @@ package org.hibernate.infra.replicate.jira.mock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,6 +24,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -191,6 +193,26 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public void archive(String issueKey) {
 		// do nothing
+	}
+
+	@Override
+	public JiraVersion version(Long id) {
+		return new JiraVersion(Objects.toString(id, null));
+	}
+
+	@Override
+	public List<JiraVersion> versions(String projectKey) {
+		return List.of(new JiraVersion("version"));
+	}
+
+	@Override
+	public JiraVersion create(JiraVersion version) {
+		return version;
+	}
+
+	@Override
+	public JiraVersion update(String id, JiraVersion version) {
+		return version;
 	}
 
 	private JiraIssueLink sampleIssueLink(Long id) {
