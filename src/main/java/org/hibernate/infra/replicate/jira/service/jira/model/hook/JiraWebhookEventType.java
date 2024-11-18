@@ -12,6 +12,7 @@ import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueDeleteEv
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueLinkDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueLinkUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueUpsertEventHandler;
+import org.hibernate.infra.replicate.jira.service.jira.handler.JiraVersionUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public enum JiraWebhookEventType {
@@ -118,6 +119,28 @@ public enum JiraWebhookEventType {
 			}
 			return List
 					.of(new JiraCommentDeleteEventHandler(reportingConfig, context, event.comment.id, event.issue.id));
+		}
+	},
+	VERSION_CREATED("jira:version_created") {
+		@Override
+		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
+				HandlerProjectContext context) {
+			if (event.version == null || event.version.id == null) {
+				throw new IllegalStateException(
+						"Trying to handle a version event but version id is null: %s".formatted(event));
+			}
+			return List.of(new JiraVersionUpsertEventHandler(reportingConfig, context, event.version.id));
+		}
+	},
+	VERSION_UPDATED("jira:version_updated") {
+		@Override
+		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
+				HandlerProjectContext context) {
+			if (event.version == null || event.version.id == null) {
+				throw new IllegalStateException(
+						"Trying to handle a version event but version id is null: %s".formatted(event));
+			}
+			return List.of(new JiraVersionUpsertEventHandler(reportingConfig, context, event.version.id));
 		}
 	};
 
