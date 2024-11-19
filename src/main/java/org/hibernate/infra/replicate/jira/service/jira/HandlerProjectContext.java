@@ -246,14 +246,25 @@ public final class HandlerProjectContext implements AutoCloseable {
 	}
 
 	public JiraVersion fixVersion(JiraVersion version) {
-		JiraVersion v = destFixVersions.get(version.name);
-		if (v != null) {
-			return v;
+		return fixVersion(version, false);
+	}
+
+	public JiraVersion fixVersion(JiraVersion version, boolean force) {
+		if (!force) {
+			JiraVersion v = destFixVersions.get(version.name);
+			if (v != null) {
+				return v;
+			}
 		}
 		versionLock.lock();
 		try {
-			return destFixVersions.computeIfAbsent(version.name,
-					name -> upsert(project, projectGroupContext, destinationJiraClient, version, List.of()));
+			if (force) {
+				return destFixVersions.compute(version.name, (name, current) -> upsert(project, projectGroupContext,
+						destinationJiraClient, version, List.of()));
+			} else {
+				return destFixVersions.computeIfAbsent(version.name,
+						name -> upsert(project, projectGroupContext, destinationJiraClient, version, List.of()));
+			}
 		} catch (Exception e) {
 			Log.errorf(e,
 					"Couldn't create a copy of the fix version %s, version will not be synced for a particular Jira ticket.",
