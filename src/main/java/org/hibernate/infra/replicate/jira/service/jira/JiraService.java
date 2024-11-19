@@ -256,6 +256,18 @@ public class JiraService {
 			triggerCommentSyncEvents(project, null, comments);
 			rc.end();
 		});
+		mi.router().get("/sync/fix-versions/:project").blockingHandler(rc -> {
+			String project = rc.pathParam("project");
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			context.submitTask(context::refreshFixVersions);
+			rc.end();
+		});
 	}
 
 	/**
