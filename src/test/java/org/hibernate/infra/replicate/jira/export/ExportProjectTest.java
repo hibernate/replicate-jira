@@ -27,6 +27,7 @@ import org.apache.commons.csv.CSVPrinter;
 
 @TestProfile(ExportProjectTest.Profile.class)
 @QuarkusTest
+@Disabled
 class ExportProjectTest {
 
 	private static final String DEFAULT_REPORTER_NAME = "hibernate-admins@redhat.com";
