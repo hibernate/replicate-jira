@@ -260,7 +260,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 		try {
 			if (force) {
 				return destFixVersions.compute(version.name, (name, current) -> upsert(project, projectGroupContext,
-						destinationJiraClient, version, List.of()));
+						destinationJiraClient, version, destinationJiraClient().versions(project.projectKey())));
 			} else {
 				return destFixVersions.computeIfAbsent(version.name,
 						name -> upsert(project, projectGroupContext, destinationJiraClient, version, List.of()));
