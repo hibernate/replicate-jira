@@ -268,6 +268,19 @@ public class JiraService {
 			context.submitTask(context::refreshFixVersions);
 			rc.end();
 		});
+		mi.router().get("/sync/fix-versions/:project/:versionId").blockingHandler(rc -> {
+			String project = rc.pathParam("project");
+			String versionId = rc.pathParam("versionId");
+
+			HandlerProjectContext context = contextPerProject.get(project);
+
+			if (context == null) {
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+			}
+
+			context.fixVersion(context.sourceJiraClient().version(Long.parseLong(versionId)), true);
+			rc.end();
+		});
 	}
 
 	/**
