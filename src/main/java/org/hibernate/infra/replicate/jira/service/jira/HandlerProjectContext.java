@@ -2,10 +2,14 @@ package org.hibernate.infra.replicate.jira.service.jira;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
@@ -16,6 +20,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulk;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import io.quarkus.logging.Log;
 
@@ -26,6 +31,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private static final int ISSUES_PER_REQUEST = 25;
 	private static final String SYNC_ISSUE_PLACEHOLDER_SUMMARY = "Sync issue placeholder";
 	private final ReentrantLock lock = new ReentrantLock();
+	private final ReentrantLock versionLock = new ReentrantLock();
 
 	private final String projectName;
 	private final String projectGroupName;
@@ -42,6 +48,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final Map<String, HandlerProjectContext> allProjectsContextMap;
 	private final Pattern sourceLabelPattern;
 	private final DateTimeFormatter formatter;
+
+	private final Map<String, JiraVersion> destFixVersions;
 
 	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext,
@@ -63,6 +71,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.sourceLabelPattern = Pattern
 				.compile(projectGroupContext.projectGroup().formatting().labelTemplate().formatted(".+"));
 		this.formatter = DateTimeFormatter.ofPattern(projectGroupContext.projectGroup().formatting().timestampFormat());
+
+		this.destFixVersions = getAndCreateMissingCurrentFixVersions(project, projectGroupContext, sourceJiraClient,
+				destinationJiraClient);
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -232,5 +243,86 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public String formatTimestamp(ZonedDateTime time) {
 		return time != null ? time.format(formatter) : "";
+	}
+
+	public JiraVersion fixVersion(JiraVersion version) {
+		JiraVersion v = destFixVersions.get(version.name);
+		if (v != null) {
+			return v;
+		}
+		versionLock.lock();
+		try {
+			return destFixVersions.computeIfAbsent(version.name,
+					name -> upsert(project, projectGroupContext, destinationJiraClient, version, List.of()));
+		} catch (Exception e) {
+			Log.errorf(e,
+					"Couldn't create a copy of the fix version %s, version will not be synced for a particular Jira ticket.",
+					version.name);
+			return null;
+		} finally {
+			versionLock.unlock();
+		}
+	}
+
+	private static Map<String, JiraVersion> getAndCreateMissingCurrentFixVersions(JiraConfig.JiraProject project,
+			HandlerProjectGroupContext projectGroupContext, JiraRestClient sourceJiraClient,
+			JiraRestClient destinationJiraClient) {
+		Map<String, JiraVersion> result = new HashMap<>();
+
+		try {
+			List<JiraVersion> upstreamVersions = sourceJiraClient.versions(project.originalProjectKey());
+			List<JiraVersion> downstreamVersions = destinationJiraClient.versions(project.projectKey());
+
+			for (JiraVersion upstreamVersion : upstreamVersions) {
+				JiraVersion downstreamVersion = upsert(project, projectGroupContext, destinationJiraClient,
+						upstreamVersion, downstreamVersions);
+				result.put(upstreamVersion.name, downstreamVersion);
+			}
+		} catch (Exception e) {
+			Log.errorf(e, "Encountered a problem while building the fix version map for %s: %s", project.projectKey(),
+					e.getMessage());
+		}
+
+		return result;
+	}
+
+	private static JiraVersion upsert(JiraConfig.JiraProject project, HandlerProjectGroupContext projectGroupContext,
+			JiraRestClient jiraRestClient, JiraVersion upstreamVersion, List<JiraVersion> downstreamVersions) {
+		Optional<JiraVersion> version = JiraVersion.findVersion(upstreamVersion.id, downstreamVersions);
+		JiraVersion downstreamVersion = null;
+		if (version.isEmpty()) {
+			Log.infof("Creating a new fix version for project %s: %s", project.projectKey(), upstreamVersion.name);
+			downstreamVersion = processJiraVersion(project, projectGroupContext, upstreamVersion,
+					() -> jiraRestClient.create(upstreamVersion.copyForProject(project)));
+		} else if (versionNeedsUpdate(upstreamVersion, version.get())) {
+			Log.infof("Updating a fix version for project %s: %s", project.projectKey(), upstreamVersion.name);
+			downstreamVersion = processJiraVersion(project, projectGroupContext, upstreamVersion,
+					() -> jiraRestClient.update(version.get().id, upstreamVersion.copyForProject(project)));
+		} else {
+			downstreamVersion = version.get();
+		}
+		return downstreamVersion;
+	}
+
+	private static JiraVersion processJiraVersion(JiraConfig.JiraProject project,
+			HandlerProjectGroupContext projectGroupContext, JiraVersion upstreamVersion, Supplier<JiraVersion> action) {
+		try {
+			projectGroupContext.startProcessingEvent();
+			return action.get();
+		} catch (InterruptedException e) {
+			Log.error("Interrupted while trying to process fix version", e);
+			Thread.currentThread().interrupt();
+		} catch (Exception e) {
+			Log.errorf(e, "Ignoring fix version sync. Unable to process fix %s version for project %s: %s",
+					upstreamVersion.name, project.projectKey(), e.getMessage());
+		}
+		return null;
+	}
+
+	private static boolean versionNeedsUpdate(JiraVersion upstreamVersion, JiraVersion downstreamVersion) {
+		return !Objects.equals(upstreamVersion.name, downstreamVersion.name)
+				|| !Objects.equals(upstreamVersion.prepareVersionDescriptionForCopy(), downstreamVersion.description)
+				|| upstreamVersion.released != downstreamVersion.released
+				|| !Objects.equals(upstreamVersion.releaseDate, downstreamVersion.releaseDate);
 	}
 }
