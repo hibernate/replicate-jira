@@ -264,6 +264,17 @@ public final class HandlerProjectContext implements AutoCloseable {
 		}
 	}
 
+	public void refreshFixVersions() {
+		versionLock.lock();
+		try {
+			destFixVersions.clear();
+			destFixVersions.putAll(getAndCreateMissingCurrentFixVersions(project, projectGroupContext, sourceJiraClient,
+					destinationJiraClient));
+		} finally {
+			versionLock.unlock();
+		}
+	}
+
 	private static Map<String, JiraVersion> getAndCreateMissingCurrentFixVersions(JiraConfig.JiraProject project,
 			HandlerProjectGroupContext projectGroupContext, JiraRestClient sourceJiraClient,
 			JiraRestClient destinationJiraClient) {
