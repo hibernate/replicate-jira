@@ -12,6 +12,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/jira/webhooks")
@@ -24,9 +25,9 @@ public class JiraWebHookListenerResource {
 	@Path("/{project}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public String somethingHappenedUpstream(@RestPath @NotNull @ConfiguredProject String project,
-			JiraWebHookEvent event) {
+			@QueryParam("triggeredByUser") String triggeredByUser, JiraWebHookEvent event) {
 		Log.infof("Received a notification about %s project: %.200s...", project, event);
-		jiraService.acknowledge(project, event);
+		jiraService.acknowledge(project, event, triggeredByUser);
 		return "ack";
 	}
 }
