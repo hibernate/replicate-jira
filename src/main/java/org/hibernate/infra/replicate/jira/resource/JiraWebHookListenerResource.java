@@ -2,6 +2,7 @@ package org.hibernate.infra.replicate.jira.resource;
 
 import org.hibernate.infra.replicate.jira.service.jira.JiraService;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
+import org.hibernate.infra.replicate.jira.service.validation.ConfiguredProject;
 
 import org.jboss.resteasy.reactive.RestPath;
 
@@ -22,7 +23,7 @@ public class JiraWebHookListenerResource {
 	@POST
 	@Path("/{project}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public String somethingHappened(@RestPath @NotNull /* @ConfiguredProject */ String project,
+	public String somethingHappenedUpstream(@RestPath @NotNull @ConfiguredProject String project,
 			JiraWebHookEvent event) {
 		Log.infof("Received a notification about %s project: %.200s...", project, event);
 		jiraService.acknowledge(project, event);
