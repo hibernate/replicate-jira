@@ -347,4 +347,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 				|| upstreamVersion.released != downstreamVersion.released
 				|| !Objects.equals(upstreamVersion.releaseDate, downstreamVersion.releaseDate);
 	}
+
+	public boolean isUserIgnored(String triggeredByUser) {
+		return projectGroupContext.projectGroup().users().ignoredUpstreamUsers().contains(triggeredByUser);
+	}
 }
