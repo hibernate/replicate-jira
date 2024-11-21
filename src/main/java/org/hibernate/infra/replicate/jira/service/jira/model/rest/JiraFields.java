@@ -26,6 +26,14 @@ public class JiraFields extends JiraBaseObject {
 	public ZonedDateTime created;
 	public ZonedDateTime updated;
 
+	public static JiraFields empty() {
+		JiraFields fields = new JiraFields();
+		fields.priority = null;
+		fields.issuetype = null;
+		fields.project = null;
+		return fields;
+	}
+
 	@Override
 	public String toString() {
 		return "JiraFields{" + "summary='" + summary + '\'' + ", description=" + description + ", priority=" + priority

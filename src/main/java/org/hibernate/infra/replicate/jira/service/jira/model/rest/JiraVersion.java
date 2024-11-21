@@ -54,7 +54,7 @@ public class JiraVersion extends JiraBaseObject {
 		// e.g. https://hibernate.atlassian.net/projects/HSEARCH/versions/32220/
 		Pattern pattern = Pattern.compile("(?s)^\\{quote\\}This \\[version.+/versions/%s\\].*".formatted(versionId));
 		for (JiraVersion check : versions) {
-			if (pattern.matcher(check.description).matches()) {
+			if (check.description != null && pattern.matcher(check.description).matches()) {
 				return Optional.of(check);
 			}
 		}
