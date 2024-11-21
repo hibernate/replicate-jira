@@ -366,6 +366,14 @@ public interface JiraConfig {
 		 * {@link #mapping() mapping}.
 		 */
 		Optional<String> profileUrl();
+
+		/**
+		 * It may be helpful in some cases to ignore webhook events triggered by some
+		 * users. E.g. the sync user that applies updates upstream can be listed here to
+		 * prevent infinite update loop.
+		 */
+		@WithDefault("not-a-user")
+		Set<String> ignoredUpstreamUsers();
 	}
 
 	/**
