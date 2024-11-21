@@ -20,7 +20,9 @@ import jakarta.validation.Payload;
 @Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
 @Retention(RUNTIME)
 public @interface ConfiguredProject {
-	String message() default "The {project} project is not configured";
+	String message() default "The ${project} project is not configured";
+
+	boolean upstream() default true;
 
 	Class<?>[] groups() default {};
 
