@@ -46,6 +46,8 @@ import jakarta.ws.rs.core.MediaType;
 @ApplicationScoped
 public class JiraService {
 
+	private static final String SYSTEM_USER = "94KJcxFzgxZlXyTss4oR0rDNqtjwjhIiZLzYNx0Mwuc=";
+
 	private final ReportingConfig reportingConfig;
 	private final Map<String, HandlerProjectContext> contextPerProject;
 	private final JiraConfig jiraConfig;
@@ -297,8 +299,10 @@ public class JiraService {
 	 *            {@link JiraConfig.JiraProjectGroup#projects()}
 	 * @param event
 	 *            The body of the event posted by the webhook.
+	 * @param triggeredByUser
+	 *            The ID of the Jira user that triggered the webhook event.
 	 */
-	public void acknowledge(String project, JiraWebHookEvent event) {
+	public void acknowledge(String project, JiraWebHookEvent event, String triggeredByUser) {
 		event.eventType().ifPresentOrElse(eventType -> {
 			var context = contextPerProject.get(project);
 			if (context == null) {
@@ -307,6 +311,11 @@ public class JiraService {
 						.formatted(project));
 				failureCollector.close();
 				throw new ConstraintViolationException("Project " + project + " is not configured.", Set.of());
+			}
+
+			if (context.isUserIgnored(triggeredByUser)) {
+				Log.infof("Event was triggered by %s user that is in the ignore list.", triggeredByUser);
+				return;
 			}
 
 			for (Runnable handler : eventType.handlers(reportingConfig, event, context)) {
@@ -381,7 +390,7 @@ public class JiraService {
 		event.issue = issue;
 
 		String projectKey = Objects.toString(jiraIssue.fields.project.properties().get("key"));
-		acknowledge(projectKey, event);
+		acknowledge(projectKey, event, SYSTEM_USER);
 
 		// now sync comments:
 		if (jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null) {
@@ -401,7 +410,7 @@ public class JiraService {
 				event.issueLink = new JiraWebHookIssueLink();
 				event.issueLink.id = Long.parseLong(link.id);
 
-				acknowledge(projectKey, event);
+				acknowledge(projectKey, event, SYSTEM_USER);
 			}
 		}
 	}
@@ -413,7 +422,7 @@ public class JiraService {
 			event.comment.id = Long.parseLong(comment.id);
 			event.issue = issue;
 			event.webhookEvent = JiraWebhookEventType.COMMENT_UPDATED.getName();
-			acknowledge(projectKey, event);
+			acknowledge(projectKey, event, SYSTEM_USER);
 		}
 	}
 }
