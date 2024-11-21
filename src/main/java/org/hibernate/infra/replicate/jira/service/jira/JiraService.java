@@ -18,6 +18,7 @@ import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestClientBuil
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueSimpleUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueTransitionOnlyEventHandler;
+import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookIssueLink;
@@ -322,6 +323,29 @@ public class JiraService {
 				context.submitTask(handler);
 			}
 		}, () -> Log.infof("Event type %s is not supported and cannot be handled.", event.webhookEvent));
+	}
+
+	public void downstreamAcknowledge(String project, JiraActionEvent event) {
+		event.eventType().ifPresentOrElse(eventType -> {
+			var context = contextPerProject.get(project);
+			if (context == null) {
+				FailureCollector failureCollector = FailureCollector.collector(reportingConfig);
+				failureCollector.critical("Unable to determine handler context for project %s. Was it not configured ?"
+						.formatted(project));
+				failureCollector.close();
+				throw new ConstraintViolationException("Project " + project + " is not configured.", Set.of());
+			}
+
+			if (context.isDownstreamUserIgnored(event.triggeredByUser)) {
+				Log.infof("Event was triggered by %s user that is in the ignore list.", event.triggeredByUser);
+				return;
+			}
+
+			for (Runnable handler : eventType.handlers(reportingConfig, event, context)) {
+				context.submitDownstreamTask(handler);
+			}
+		}, () -> Log.infof("Event type %s is not supported and cannot be handled.", event.event));
+
 	}
 
 	public void syncLastUpdated(String projectGroup) {

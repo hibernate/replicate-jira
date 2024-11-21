@@ -1,5 +1,8 @@
 package org.hibernate.infra.replicate.jira.service.jira;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -17,9 +20,14 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 
 	private final ExecutorService eventHandlingExecutor;
 	private final Supplier<Integer> workQueueSize;
+
+	private final ExecutorService downstreamEventHandlingExecutor;
+	private final Supplier<Integer> downstreamWorkQueueSize;
 	private final ScheduledExecutorService rateLimiterExecutor = Executors.newScheduledThreadPool(1);
 	private final Semaphore rateLimiter;
+	private final Semaphore downstreamRateLimiter;
 	private final JiraConfig.JiraProjectGroup projectGroup;
+	private final Map<String, String> invertedUsers;
 
 	public HandlerProjectGroupContext(JiraConfig.JiraProjectGroup projectGroup) {
 		this.projectGroup = projectGroup;
@@ -28,19 +36,37 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 
 		final int permits = processing.eventsPerTimeframe();
 		this.rateLimiter = new Semaphore(permits);
+		this.downstreamRateLimiter = new Semaphore(permits);
 		rateLimiterExecutor.scheduleAtFixedRate(() -> {
 			rateLimiter.drainPermits();
 			rateLimiter.release(permits);
+			downstreamRateLimiter.drainPermits();
+			downstreamRateLimiter.release(permits);
 		}, processing.timeframeInSeconds(), processing.timeframeInSeconds(), TimeUnit.SECONDS);
 
 		LinkedBlockingDeque<Runnable> workQueue = new LinkedBlockingDeque<>(processing.queueSize());
 		workQueueSize = workQueue::size;
 		eventHandlingExecutor = new ThreadPoolExecutor(processing.threads(), processing.threads(), 0L,
 				TimeUnit.MILLISECONDS, workQueue);
+
+		LinkedBlockingDeque<Runnable> downstreamWorkQueue = new LinkedBlockingDeque<>(processing.queueSize());
+		downstreamWorkQueueSize = downstreamWorkQueue::size;
+		downstreamEventHandlingExecutor = new ThreadPoolExecutor(processing.threads(), processing.threads(), 0L,
+				TimeUnit.MILLISECONDS, downstreamWorkQueue);
+
+		Map<String, String> invertedUsers = new HashMap<>();
+		for (var entry : projectGroup.users().mapping().entrySet()) {
+			invertedUsers.put(entry.getValue(), entry.getKey());
+		}
+		this.invertedUsers = Collections.unmodifiableMap(invertedUsers);
 	}
 
 	public void startProcessingEvent() throws InterruptedException {
 		rateLimiter.acquire(1);
+	}
+
+	public void startProcessingDownstreamEvent() throws InterruptedException {
+		downstreamRateLimiter.acquire(1);
 	}
 
 	public JiraConfig.JiraProjectGroup projectGroup() {
@@ -51,8 +77,16 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 		return workQueueSize.get();
 	}
 
+	public int pendingDownstreamEventsInCurrentContext() {
+		return downstreamWorkQueueSize.get();
+	}
+
 	public void submitTask(Runnable task) {
 		eventHandlingExecutor.submit(task);
+	}
+
+	public void submitDownstreamTask(Runnable task) {
+		downstreamEventHandlingExecutor.submit(task);
 	}
 
 	@Override
@@ -62,15 +96,24 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 		if (!rateLimiterExecutor.isShutdown()) {
 			rateLimiterExecutor.shutdownNow();
 		}
-		if (!eventHandlingExecutor.isShutdown()) {
+		closeEventExecutor(eventHandlingExecutor);
+		closeEventExecutor(downstreamEventHandlingExecutor);
+	}
+
+	private static void closeEventExecutor(ExecutorService executor) {
+		if (!executor.isShutdown()) {
 			try {
-				eventHandlingExecutor.shutdown();
-				if (!eventHandlingExecutor.awaitTermination(2, TimeUnit.MINUTES)) {
+				executor.shutdown();
+				if (!executor.awaitTermination(2, TimeUnit.MINUTES)) {
 					Log.warnf("Not all events were processed before the shutdown");
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
 		}
+	}
+
+	public String upstreamUser(String mappedValue) {
+		return invertedUsers.get(mappedValue);
 	}
 }

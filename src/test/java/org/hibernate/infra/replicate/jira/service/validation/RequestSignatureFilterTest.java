@@ -69,7 +69,7 @@ class RequestSignatureFilterTest {
 			throws NoSuchAlgorithmException, InvalidKeyException {
 		JiraConfig.JiraProjectGroup group = Mockito.mock(JiraConfig.JiraProjectGroup.class);
 		JiraConfig.JiraProject project = Mockito.mock(JiraConfig.JiraProject.class);
-		Mockito.when(project.security()).thenReturn(new JiraConfig.WebHookSecurity() {
+		JiraConfig.WebHookSecurity value = new JiraConfig.WebHookSecurity() {
 			@Override
 			public boolean enabled() {
 				return enabled;
@@ -79,7 +79,14 @@ class RequestSignatureFilterTest {
 			public String secret() {
 				return secret;
 			}
-		});
+
+			@Override
+			public Type type() {
+				return Type.SIGNATURE;
+			}
+		};
+		Mockito.when(project.security()).thenReturn(value);
+		Mockito.when(project.downstreamSecurity()).thenReturn(value);
 
 		Mockito.when(group.projects()).thenReturn(Map.of("PROJECT_KEY", project));
 

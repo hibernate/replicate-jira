@@ -192,6 +192,11 @@ public interface JiraConfig {
 		 * Allows enabling signature verification.
 		 */
 		WebHookSecurity security();
+
+		/**
+		 * Allows enabling signature verification of downstream events.
+		 */
+		WebHookSecurity downstreamSecurity();
 	}
 
 	interface WebHookSecurity {
@@ -205,11 +210,20 @@ public interface JiraConfig {
 		@WithDefault("false")
 		boolean enabled();
 
+		@WithDefault("SIGNATURE")
+		Type type();
+
 		/**
-		 * The secret used to sing the web hook request body.
+		 * Verification secret, e.g. the secret used to sing the web hook request body.
+		 * Can also be just some token that we will compare. Depends on the security
+		 * type.
 		 */
 		@WithDefault("not-a-secret")
 		String secret();
+
+		enum Type {
+			SIGNATURE, TOKEN
+		}
 	}
 
 	interface Instance {
@@ -374,6 +388,9 @@ public interface JiraConfig {
 		 */
 		@WithDefault("not-a-user")
 		Set<String> ignoredUpstreamUsers();
+
+		@WithDefault("not-a-user")
+		Set<String> ignoredDownstreamUsers();
 	}
 
 	/**
