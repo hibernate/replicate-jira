@@ -1,25 +1,21 @@
 package org.hibernate.infra.replicate.jira.service.validation;
 
-import java.util.Locale;
-import java.util.Set;
-
-import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.validator.constraintvalidation.HibernateConstraintValidatorContext;
 
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-// @ApplicationScoped
 public class ConfiguredProjectValidator implements ConstraintValidator<ConfiguredProject, String> {
 
-	private final Set<String> projects;
+	@Inject
+	Instance<ConfiguredProjectsService> configuredProjectsService;
+	private boolean upstream;
 
-	// @Inject
-	public ConfiguredProjectValidator() {
-		JiraConfig jiraConfig = null;
-		projects = Set.of();
-		// jiraConfig.projects().keySet().stream().map( s -> s.toLowerCase( Locale.ROOT
-		// ) ).collect( Collectors.toSet() );
+	@Override
+	public void initialize(ConfiguredProject constraintAnnotation) {
+		upstream = constraintAnnotation.upstream();
 	}
 
 	@Override
@@ -27,7 +23,9 @@ public class ConfiguredProjectValidator implements ConstraintValidator<Configure
 		if (value == null) {
 			return true;
 		}
-		if (projects.contains(value.toLowerCase(Locale.ROOT))) {
+		if (upstream
+				? configuredProjectsService.get().isUpstreamProject(value)
+				: configuredProjectsService.get().isDownstreamProject(value)) {
 			return true;
 		}
 
