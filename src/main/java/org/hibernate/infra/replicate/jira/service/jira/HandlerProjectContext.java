@@ -181,6 +181,10 @@ public final class HandlerProjectContext implements AutoCloseable {
 		projectGroupContext.startProcessingEvent();
 	}
 
+	public void startProcessingDownstreamEvent() throws InterruptedException {
+		projectGroupContext.startProcessingDownstreamEvent();
+	}
+
 	public JiraUser notMappedAssignee() {
 		return notMappedAssignee;
 	}
@@ -227,6 +231,14 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public void submitTask(Runnable runnable) {
 		projectGroupContext.submitTask(runnable);
+	}
+
+	public int pendingDownstreamEventsInCurrentContext() {
+		return projectGroupContext.pendingDownstreamEventsInCurrentContext();
+	}
+
+	public void submitDownstreamTask(Runnable runnable) {
+		projectGroupContext.submitDownstreamTask(runnable);
 	}
 
 	public Optional<HandlerProjectContext> contextForProjectInSameGroup(String project) {
@@ -350,5 +362,13 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public boolean isUserIgnored(String triggeredByUser) {
 		return projectGroupContext.projectGroup().users().ignoredUpstreamUsers().contains(triggeredByUser);
+	}
+
+	public boolean isDownstreamUserIgnored(String triggeredByUser) {
+		return projectGroupContext.projectGroup().users().ignoredDownstreamUsers().contains(triggeredByUser);
+	}
+
+	public String upstreamUser(String mappedValue) {
+		return projectGroupContext.upstreamUser(mappedValue);
 	}
 }

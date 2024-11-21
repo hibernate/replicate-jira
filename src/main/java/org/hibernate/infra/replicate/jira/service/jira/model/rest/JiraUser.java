@@ -1,5 +1,7 @@
 package org.hibernate.infra.replicate.jira.service.jira.model.rest;
 
+import java.util.Objects;
+
 import org.hibernate.infra.replicate.jira.service.jira.model.JiraBaseObject;
 
 public class JiraUser extends JiraBaseObject {
@@ -19,6 +21,14 @@ public class JiraUser extends JiraBaseObject {
 			this.accountId = value;
 		} else {
 			properties().put(propertyName, value);
+		}
+	}
+
+	public String mappedIdentifier(String propertyName) {
+		if ("accountId".equals(propertyName)) {
+			return this.accountId;
+		} else {
+			return Objects.toString(properties().get(propertyName), null);
 		}
 	}
 
