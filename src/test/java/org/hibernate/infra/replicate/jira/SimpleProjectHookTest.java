@@ -34,8 +34,7 @@ class SimpleProjectHookTest {
 	@Test
 	void unknown() {
 		given().when().body(REQUEST_BODY).contentType(ContentType.JSON).post("api/jira/webhooks/NOTAPROJECTKEY").then()
-				.statusCode(500).body(containsString(
-						"Unable to determine handler context for project NOTAPROJECTKEY. Was it not configured"));
+				.statusCode(400).body(containsString("The NOTAPROJECTKEY project is not configured"));
 	}
 
 	@Test
