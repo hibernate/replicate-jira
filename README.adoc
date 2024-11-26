@@ -234,6 +234,40 @@ Make sure to provide the names for the required config maps while building the i
 -Dquarkus.openshift.config-map-volumes.app-config.config-map-name=<your-config-map-name> \
 ----
 
+== Route configuration
+
+We are not adding a route as part of the build since setting the path is currently unsupported.
+Create a route either with `oc` or through a UI using the OpenShift console.
+Make sure to set the next spec properties:
+
+[source,yaml]
+----
+spec:
+  host: your-host.smth
+  path: /path-to-use
+  to:
+    kind: Service
+    name: your-replicate-jira-service-name
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+----
+
+Note that certificates are not provided explicitly. To fully enable https and finish route configuration
+add the following annotations to the route:
+
+[source,yaml]
+----
+# will mark the resource as such that certificates will be generated for it:
+# see https://github.com/tnozicka/openshift-acme/#enabling-acme-certificates-for-your-object
+kubernetes.io/tls-acme: 'true'
+# Set the target to root so that the path `/path-to-use` is not passed to the service:
+haproxy.router.openshift.io/rewrite-target: /
+----
+
 == Management endpoints
 
 There are management endpoints to sync particular issues/comments.
