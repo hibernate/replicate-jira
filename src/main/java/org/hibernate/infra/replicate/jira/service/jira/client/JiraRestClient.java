@@ -15,6 +15,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitions;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
@@ -144,6 +145,10 @@ public interface JiraRestClient {
 	@POST
 	@Path("/issue/{issueKey}/transitions")
 	void transition(@PathParam("issueKey") String issueKey, JiraTransition transition);
+
+	@GET
+	@Path("/issue/{issueKey}/transitions")
+	JiraTransitions availableTransitions(String issueKey);
 
 	@PUT
 	@Path("/issue/{issueKey}/archive")
