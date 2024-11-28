@@ -15,7 +15,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueTrans
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
-public class JiraIssueDeleteEventHandler extends JiraEventHandler {
+public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 	private final String key;
 
 	public JiraIssueDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id,
@@ -70,7 +70,7 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 
 			context.destinationJiraClient().update(destinationKey, updated);
 
-			prepareTransition()
+			prepareTransition(issue)
 					.ifPresent(transition -> context.destinationJiraClient().transition(destinationKey, transition));
 
 			context.destinationJiraClient().archive(destinationKey);
@@ -80,11 +80,12 @@ public class JiraIssueDeleteEventHandler extends JiraEventHandler {
 		}
 	}
 
-	private Optional<JiraTransition> prepareTransition() {
-		Optional<String> deletedTransition = context.projectGroup().statuses().deletedTransition();
-		if (deletedTransition.isPresent()) {
+	private Optional<JiraTransition> prepareTransition(JiraIssue issue) {
+		Optional<String> deletedStatus = context.projectGroup().statuses().deletedStatus();
+		if (deletedStatus.isPresent()) {
+			prepareTransition(deletedStatus.get(), issue);
 			JiraTransition transition = new JiraTransition();
-			transition.transition = new JiraIssueTransition(deletedTransition.get());
+			transition.transition = new JiraIssueTransition(deletedStatus.get());
 
 			Optional<String> deletedResolution = context.projectGroup().statuses().deletedResolution();
 			deletedResolution.ifPresent(

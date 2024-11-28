@@ -23,9 +23,18 @@ public class JiraStaticFieldMappingCache {
 		return issueType.computeIfAbsent(projectGroup, onMissing).getOrDefault(sourceId, defaultValue);
 	}
 
-	public static String status(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing,
-			String defaultValue) {
-		return status.computeIfAbsent(projectGroup, onMissing).getOrDefault(sourceId, defaultValue);
+	public static String status(String projectGroup, String transitionKey, Function<String, String> onMissing) {
+		Map<String, String> groupStatuses = status.computeIfAbsent(projectGroup, pg -> new ConcurrentHashMap<>());
+
+		String id = groupStatuses.get(transitionKey);
+		if (id == null) {
+			id = onMissing.apply(transitionKey);
+			if (id != null) {
+				groupStatuses.put(transitionKey, id);
+			}
+		}
+
+		return id;
 	}
 
 	public static String linkType(String projectGroup, String sourceId, Function<String, Map<String, String>> onMissing,

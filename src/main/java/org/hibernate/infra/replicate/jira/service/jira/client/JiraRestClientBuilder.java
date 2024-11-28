@@ -21,6 +21,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitions;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
@@ -248,6 +249,11 @@ public class JiraRestClientBuilder {
 		@Override
 		public void transition(String issueKey, JiraTransition transition) {
 			withRetry(() -> delegate.transition(issueKey, transition));
+		}
+
+		@Override
+		public JiraTransitions availableTransitions(String issueKey) {
+			return withRetry(() -> delegate.availableTransitions(issueKey));
 		}
 
 		@Override
