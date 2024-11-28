@@ -37,12 +37,12 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 	protected void applyTransition(JiraIssue sourceIssue, JiraIssue destIssue, String destinationKey) {
 		Set<String> statusesToIgnore = context.projectGroup().statuses().ignoreTransitionCondition()
-				.getOrDefault(sourceIssue.fields.status.name.toLowerCase(Locale.ROOT).replace(' ', '-'), Set.of());
+				.getOrDefault(sourceIssue.fields.status.name.toLowerCase(Locale.ROOT), Set.of());
 		if (statusesToIgnore.contains(destIssue.fields.status.name.toLowerCase(Locale.ROOT))) {
 			// no need to apply the transition :)
 			return;
 		}
-		prepareTransition(sourceIssue).ifPresent(
+		prepareTransition(sourceIssue.fields.status, destIssue).ifPresent(
 				jiraTransition -> context.destinationJiraClient().transition(destinationKey, jiraTransition));
 	}
 
@@ -213,8 +213,15 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		return new JiraUser(context.projectGroup().users().mappedPropertyName(), value);
 	}
 
-	private Optional<JiraTransition> prepareTransition(JiraIssue sourceIssue) {
-		return statusToTransition(sourceIssue.fields.status.id).map(JiraTransition::new);
+	protected Optional<JiraTransition> prepareTransition(JiraSimpleObject sourceStatus, JiraIssue destIssue) {
+		String downstreamStatus = context.projectGroup().statuses().mapping()
+				.get(sourceStatus.name.toLowerCase(Locale.ROOT));
+		return prepareTransition(downstreamStatus, destIssue);
+	}
+
+	protected Optional<JiraTransition> prepareTransition(String downstreamStatus, JiraIssue destIssue) {
+		return statusToTransition(destIssue.fields.status.name, downstreamStatus,
+				() -> findRequiredTransitionId(downstreamStatus, destIssue)).map(JiraTransition::new);
 	}
 
 	protected Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {

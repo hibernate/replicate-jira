@@ -19,10 +19,12 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkR
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueResponse;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitions;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
@@ -188,6 +190,18 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public void transition(String issueKey, JiraTransition transition) {
 		// do nothing
+	}
+
+	@Override
+	public JiraTransitions availableTransitions(String issueKey) {
+		JiraTransitions transitions = new JiraTransitions();
+		JiraIssueTransition transition = new JiraIssueTransition();
+		transition.name = "To To Do";
+		transition.id = "100";
+		transition.to = new JiraSimpleObject("1234");
+		transition.to.name = "To Do";
+		transitions.transitions = List.of(transition);
+		return transitions;
 	}
 
 	@Override
