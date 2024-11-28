@@ -310,10 +310,10 @@ public interface JiraConfig {
 		Optional<String> deletedResolution();
 
 		/**
-		 * @return The id of the transition to apply to get the "Close" transition when
-		 *         closing the issue deleted upstream before archiving it.
+		 * @return The status name to transition the issue to when handling an issue
+		 *         deleted/moved upstream before archiving it.
 		 */
-		Optional<String> deletedTransition();
+		Optional<String> deletedStatus();
 
 		/**
 		 * @return A map where the {@code key} is the upstream status name, and the
