@@ -228,7 +228,7 @@ public class JiraService {
 			// syncs only assignee/body, without links comments and transitions
 			String project = rc.pathParam("project");
 			String query = rc.queryParam("query").getFirst();
-			String applyTransitionUpdate = rc.queryParam("applyTransitionUpdate").getFirst();
+			boolean applyTransitionUpdate = "true".equalsIgnoreCase(rc.queryParam("applyTransitionUpdate").getFirst());
 
 			HandlerProjectContext context = contextPerProject.get(project);
 
@@ -236,9 +236,9 @@ public class JiraService {
 				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
 			}
 
-			syncByQuery(query, context,
+			context.submitTask(() -> syncByQuery(query, context,
 					jiraIssue -> context.submitTask(new JiraIssueSimpleUpsertEventHandler(reportingConfig, context,
-							jiraIssue, "true".equals(applyTransitionUpdate))));
+							jiraIssue, applyTransitionUpdate))));
 			rc.end();
 		});
 		mi.router().post("/sync/comments/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
