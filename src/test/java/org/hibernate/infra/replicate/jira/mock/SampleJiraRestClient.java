@@ -229,6 +229,11 @@ public class SampleJiraRestClient implements JiraRestClient {
 		return version;
 	}
 
+	@Override
+	public void assign(String id, JiraUser assignee) {
+		// ok
+	}
+
 	private JiraIssueLink sampleIssueLink(Long id) {
 		try {
 			return objectMapper.readValue("""
