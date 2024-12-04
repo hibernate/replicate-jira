@@ -281,6 +281,11 @@ public class JiraRestClientBuilder {
 			return withRetry(() -> delegate.update(id, version));
 		}
 
+		@Override
+		public void assign(String id, JiraUser assignee) {
+			withRetry(() -> delegate.assign(id, assignee));
+		}
+
 		private static final int RETRIES = 5;
 		private static final Duration WAIT_BETWEEN_RETRIES = Duration.of(2, ChronoUnit.SECONDS);
 
