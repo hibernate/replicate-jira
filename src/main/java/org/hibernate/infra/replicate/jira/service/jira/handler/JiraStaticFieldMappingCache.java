@@ -10,6 +10,7 @@ public class JiraStaticFieldMappingCache {
 	private static final Map<String, Map<String, String>> priorities = new ConcurrentHashMap<>();
 	private static final Map<String, Map<String, String>> issueType = new ConcurrentHashMap<>();
 	private static final Map<String, Map<String, String>> status = new ConcurrentHashMap<>();
+	private static final Map<String, Map<String, String>> statusUpstream = new ConcurrentHashMap<>();
 	private static final Map<String, Map<String, String>> linkType = new ConcurrentHashMap<>();
 	private static final Map<String, Map<String, String>> user = new ConcurrentHashMap<>();
 
@@ -24,6 +25,15 @@ public class JiraStaticFieldMappingCache {
 	}
 
 	public static String status(String projectGroup, String transitionKey, Function<String, String> onMissing) {
+		return status(status, projectGroup, transitionKey, onMissing);
+	}
+
+	public static String statusUpstream(String projectGroup, String transitionKey, Function<String, String> onMissing) {
+		return status(statusUpstream, projectGroup, transitionKey, onMissing);
+	}
+
+	private static String status(Map<String, Map<String, String>> status, String projectGroup, String transitionKey,
+			Function<String, String> onMissing) {
 		Map<String, String> groupStatuses = status.computeIfAbsent(projectGroup, pg -> new ConcurrentHashMap<>());
 
 		String id = groupStatuses.get(transitionKey);

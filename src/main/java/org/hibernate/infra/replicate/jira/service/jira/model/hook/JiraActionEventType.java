@@ -6,12 +6,15 @@ import java.util.Locale;
 import java.util.Optional;
 
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.handler.action.JiraAffectsVersionActionEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.action.JiraAssigneeActionEventHandler;
+import org.hibernate.infra.replicate.jira.service.jira.handler.action.JiraFixVersionActionEventHandler;
+import org.hibernate.infra.replicate.jira.service.jira.handler.action.JiraTransitionActionEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public enum JiraActionEventType {
-	ISSUE_ASSIGNED("jira:issue_assigned") {
+	ISSUE_ASSIGNED("jira:issue_update_assignee") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
 				HandlerProjectContext context) {
@@ -22,11 +25,25 @@ public enum JiraActionEventType {
 			return List.of(new JiraAssigneeActionEventHandler(reportingConfig, context, event));
 		}
 	},
-	ISSUE_TRANSITIONED("jira:issue_transitioned") {
+	ISSUE_TRANSITIONED("jira:issue_update_status") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
 				HandlerProjectContext context) {
-			throw new UnsupportedOperationException("jira:issue_transitioned not supported yet");
+			return List.of(new JiraTransitionActionEventHandler(reportingConfig, context, event));
+		}
+	},
+	FIX_VERSION_CHANGED("jira:issue_update_fixversions") {
+		@Override
+		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
+				HandlerProjectContext context) {
+			return List.of(new JiraFixVersionActionEventHandler(reportingConfig, context, event));
+		}
+	},
+	AFFECTS_VERSION_CHANGED("jira:issue_update_versions") {
+		@Override
+		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
+				HandlerProjectContext context) {
+			return List.of(new JiraAffectsVersionActionEventHandler(reportingConfig, context, event));
 		}
 	};
 

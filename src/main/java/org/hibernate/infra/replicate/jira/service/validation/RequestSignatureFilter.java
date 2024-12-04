@@ -32,7 +32,7 @@ import jakarta.ws.rs.core.Response;
 public class RequestSignatureFilter {
 
 	private static final Pattern PATH_UPSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/(.+)");
-	private static final Pattern PATH_DOWNSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/downstream/(.+)");
+	private static final Pattern PATH_DOWNSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/mirror/(.+)");
 	private static final BiPredicate<String, byte[]> ALLOW_ALL = (a, b) -> true;
 
 	private final Map<String, BiPredicate<String, byte[]>> upstreamChecks;

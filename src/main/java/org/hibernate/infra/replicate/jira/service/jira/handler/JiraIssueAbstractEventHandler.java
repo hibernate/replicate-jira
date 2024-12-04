@@ -18,6 +18,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitions;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
@@ -231,7 +232,9 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 	protected Optional<JiraTransition> prepareTransition(String downstreamStatus, JiraIssue destIssue) {
 		return statusToTransition(destIssue.fields.status.name, downstreamStatus,
-				() -> findRequiredTransitionId(downstreamStatus, destIssue)).map(JiraTransition::new);
+				() -> JiraTransitions.findRequiredTransitionId(context.destinationJiraClient(), failureCollector,
+						downstreamStatus, destIssue))
+				.map(JiraTransition::new);
 	}
 
 	protected Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {
