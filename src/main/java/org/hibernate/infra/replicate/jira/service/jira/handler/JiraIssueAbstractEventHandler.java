@@ -174,6 +174,16 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 			}
 		}
 
+		if (sourceIssue.fields.versions != null) {
+			destinationIssue.fields.versions = new ArrayList<>();
+			for (JiraVersion version : sourceIssue.fields.versions) {
+				JiraVersion downstream = context.fixVersion(version);
+				if (downstream != null) {
+					destinationIssue.fields.versions.add(downstream);
+				}
+			}
+		}
+
 		return destinationIssue;
 	}
 
