@@ -2,7 +2,6 @@ package org.hibernate.infra.replicate.jira.service.jira.handler.action;
 
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
@@ -18,20 +17,20 @@ public class JiraAssigneeActionEventHandler extends JiraActionEventHandler {
 	protected void doRun() {
 		JiraIssue issue = context.destinationJiraClient().getIssue(event.key);
 
-		JiraIssue updated = new JiraIssue();
-		updated.fields = JiraFields.empty();
+		JiraUser user = null;
 		if (issue.fields.assignee != null) {
 			String accountId = context.upstreamUser(
 					issue.fields.assignee.mappedIdentifier(context.projectGroup().users().mappedPropertyName()));
 
 			if (accountId != null) {
-				updated.fields.assignee = new JiraUser(accountId);
-
+				user = new JiraUser(accountId);
 			}
 		} else {
-			updated.fields.assignee = new JiraUser("-1");
+			user = new JiraUser("-1");
 		}
-		context.sourceJiraClient().update(toSourceKey(event.key), updated);
+		if (user != null) {
+			context.sourceJiraClient().assign(toSourceKey(event.key), user);
+		}
 	}
 
 	@Override
