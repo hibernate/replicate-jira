@@ -32,14 +32,14 @@ public enum JiraActionEventType {
 			return List.of(new JiraTransitionActionEventHandler(reportingConfig, context, event));
 		}
 	},
-	FIX_VERSION_CHANGED("jira:issue_update_fixversions") {
+	FIX_VERSION_CHANGED("jira:issue_update_fixversion") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
 				HandlerProjectContext context) {
 			return List.of(new JiraFixVersionActionEventHandler(reportingConfig, context, event));
 		}
 	},
-	AFFECTS_VERSION_CHANGED("jira:issue_update_versions") {
+	AFFECTS_VERSION_CHANGED("jira:issue_update_version") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraActionEvent event,
 				HandlerProjectContext context) {
@@ -62,7 +62,7 @@ public enum JiraActionEventType {
 			return Optional.empty();
 		}
 		for (JiraActionEventType value : values()) {
-			if (value.name.equals(webhookEvent.toLowerCase(Locale.ROOT))) {
+			if (value.name.equals(webhookEvent.toLowerCase(Locale.ROOT).replace(" ", ""))) {
 				return Optional.of(value);
 			}
 		}
