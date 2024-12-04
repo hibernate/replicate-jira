@@ -22,7 +22,6 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.rest.client.reactive.ClientExceptionMapper;
-import io.quarkus.rest.client.reactive.ClientQueryParam;
 import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -41,8 +40,10 @@ import jakarta.ws.rs.core.Response;
  * version (included), e.g.:
  */
 // so that we do not spam with all notifications ...
-// since `notifyUsers=false` does not apply to all requests and we've disabled notifications downstream
-// this query param is not sent anymore to allow automation updating upstream issues to work with a non-admin user.
+// since `notifyUsers=false` does not apply to all requests and we've disabled
+// notifications downstream
+// this query param is not sent anymore to allow automation updating upstream
+// issues to work with a non-admin user.
 // @ClientQueryParam(name = "notifyUsers", value = "false")
 public interface JiraRestClient {
 
@@ -150,7 +151,7 @@ public interface JiraRestClient {
 
 	@GET
 	@Path("/issue/{issueKey}/transitions")
-	JiraTransitions availableTransitions(String issueKey);
+	JiraTransitions availableTransitions(@PathParam("issueKey") String issueKey);
 
 	@PUT
 	@Path("/issue/{issueKey}/archive")
@@ -171,6 +172,10 @@ public interface JiraRestClient {
 	@PUT
 	@Path("/version/{id}")
 	JiraVersion update(@PathParam("id") String id, JiraVersion version);
+
+	@PUT
+	@Path("/issue/{issueKey}/assignee")
+	void assign(@PathParam("issueKey") String id, JiraUser assignee);
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
