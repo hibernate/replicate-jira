@@ -41,7 +41,9 @@ import jakarta.ws.rs.core.Response;
  * version (included), e.g.:
  */
 // so that we do not spam with all notifications ...
-@ClientQueryParam(name = "notifyUsers", value = "false")
+// since `notifyUsers=false` does not apply to all requests and we've disabled notifications downstream
+// this query param is not sent anymore to allow automation updating upstream issues to work with a non-admin user.
+// @ClientQueryParam(name = "notifyUsers", value = "false")
 public interface JiraRestClient {
 
 	@GET
