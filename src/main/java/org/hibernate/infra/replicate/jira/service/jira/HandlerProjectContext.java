@@ -371,4 +371,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 	public String upstreamUser(String mappedValue) {
 		return projectGroupContext.upstreamUser(mappedValue);
 	}
+
+	public String upstreamStatus(String mappedValue) {
+		return projectGroupContext.upstreamStatus(mappedValue);
+	}
 }

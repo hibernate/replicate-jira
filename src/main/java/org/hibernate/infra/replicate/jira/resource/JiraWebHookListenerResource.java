@@ -35,7 +35,7 @@ public class JiraWebHookListenerResource {
 	@POST
 	@Path("/mirror/{project}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public String somethingHappenedDownstream(@RestPath @NotNull @ConfiguredProject(upstream = false) String project,
+	public String somethingHappenedDownstream(@RestPath @NotNull @ConfiguredProject String project,
 			JiraActionEvent data) {
 		Log.tracef("Received a downstream notification about %s project: %s...", project, data);
 		jiraService.downstreamAcknowledge(project, data);
