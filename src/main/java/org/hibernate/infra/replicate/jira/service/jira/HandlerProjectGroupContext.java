@@ -28,6 +28,7 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 	private final Semaphore downstreamRateLimiter;
 	private final JiraConfig.JiraProjectGroup projectGroup;
 	private final Map<String, String> invertedUsers;
+	private final Map<String, String> invertedStatuses;
 
 	public HandlerProjectGroupContext(JiraConfig.JiraProjectGroup projectGroup) {
 		this.projectGroup = projectGroup;
@@ -54,11 +55,16 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 		downstreamEventHandlingExecutor = new ThreadPoolExecutor(processing.threads(), processing.threads(), 0L,
 				TimeUnit.MILLISECONDS, downstreamWorkQueue);
 
-		Map<String, String> invertedUsers = new HashMap<>();
-		for (var entry : projectGroup.users().mapping().entrySet()) {
-			invertedUsers.put(entry.getValue(), entry.getKey());
+		this.invertedUsers = invert(projectGroup.users().mapping());
+		this.invertedStatuses = invert(projectGroup.statuses().mapping());
+	}
+
+	private static Map<String, String> invert(Map<String, String> map) {
+		Map<String, String> result = new HashMap<>();
+		for (var entry : map.entrySet()) {
+			result.put(entry.getValue(), entry.getKey());
 		}
-		this.invertedUsers = Collections.unmodifiableMap(invertedUsers);
+		return Collections.unmodifiableMap(result);
 	}
 
 	public void startProcessingEvent() throws InterruptedException {
@@ -116,4 +122,9 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 	public String upstreamUser(String mappedValue) {
 		return invertedUsers.get(mappedValue);
 	}
+
+	public String upstreamStatus(String mappedValue) {
+		return invertedStatuses.get(mappedValue);
+	}
+
 }

@@ -10,7 +10,7 @@ public class JiraActionEvent extends JiraBaseObject {
 	public String key;
 	public String event;
 	public String assignee;
-	public String status;
+	public String value;
 
 	public String triggeredByUser;
 
@@ -21,6 +21,6 @@ public class JiraActionEvent extends JiraBaseObject {
 	@Override
 	public String toString() {
 		return "JiraActionEvent{" + "id='" + id + '\'' + ", key='" + key + '\'' + ", event='" + event + '\''
-				+ ", assignee='" + assignee + '\'' + ", status='" + status + '\'' + '}';
+				+ ", assignee='" + assignee + '\'' + ", value='" + value + '\'' + '}';
 	}
 }

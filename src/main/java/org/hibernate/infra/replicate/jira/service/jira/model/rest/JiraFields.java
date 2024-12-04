@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.hibernate.infra.replicate.jira.service.jira.model.JiraBaseObject;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public class JiraFields extends JiraBaseObject {
 
 	public String summary;
@@ -17,7 +19,9 @@ public class JiraFields extends JiraBaseObject {
 
 	public JiraUser assignee;
 	public JiraUser reporter;
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public List<JiraVersion> fixVersions;
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public List<JiraVersion> versions; // this is actually `Affects versions`
 	// NOTE: this one is for "read-only" purposes, to create links a different API
 	// has to be used
