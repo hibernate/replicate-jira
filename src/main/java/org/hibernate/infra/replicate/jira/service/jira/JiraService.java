@@ -315,7 +315,7 @@ public class JiraService {
 			}
 
 			if (context.isUserIgnored(triggeredByUser)) {
-				Log.infof("Event was triggered by %s user that is in the ignore list.", triggeredByUser);
+				Log.infof("Event was triggered by %s user that is in the ignore list: %.200s", triggeredByUser, event);
 				return;
 			}
 
