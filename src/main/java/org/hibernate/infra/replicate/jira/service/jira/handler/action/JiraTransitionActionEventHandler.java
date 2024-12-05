@@ -53,6 +53,6 @@ public class JiraTransitionActionEventHandler extends JiraActionEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraAssigneeActionEventHandler[" + "event=" + event + ", project=" + context.projectName() + ']';
+		return "JiraTransitionActionEventHandler[" + "event=" + event + ", project=" + context.projectName() + ']';
 	}
 }
