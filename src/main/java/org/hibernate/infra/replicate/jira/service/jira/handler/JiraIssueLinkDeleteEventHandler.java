@@ -1,6 +1,6 @@
 package org.hibernate.infra.replicate.jira.service.jira.handler;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
@@ -11,7 +11,8 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 
 	private final Long destinationIssueId;
 	private final String issueLinkTypeId;
-	public JiraIssueLinkDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id,
+
+	public JiraIssueLinkDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long id,
 			Long sourceIssueId, Long destinationIssueId, String issueLinkTypeId) {
 		super(reportingConfig, context, id);
 		this.sourceIssueId = sourceIssueId;
@@ -46,8 +47,10 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 		}
 
 		// make sure that both sides of the link exist:
-		String outwardIssue = toDestinationKey(sourceIssue.key);
-		String inwardIssue = toDestinationKey(destinationIssue.key);
+		String outwardIssue = context.contextForOriginalProjectKey(toProjectFromKey(sourceIssue.key))
+				.toDestinationKey(sourceIssue.key);
+		String inwardIssue = context.contextForOriginalProjectKey(toProjectFromKey(destinationIssue.key))
+				.toDestinationKey(destinationIssue.key);
 		// we will let it fail if one issue does not exist as that would mean that the
 		// link is also not there:
 		context.destinationJiraClient().getIssue(outwardIssue);
@@ -68,7 +71,7 @@ public class JiraIssueLinkDeleteEventHandler extends JiraEventHandler {
 	@Override
 	public String toString() {
 		return "JiraIssueLinkDeleteEventHandler[" + "sourceIssueId=" + sourceIssueId + ", destinationIssueId="
-				+ destinationIssueId + ", issueLinkTypeId='" + issueLinkTypeId + '\'' + ", project="
-				+ context.projectName() + ']';
+				+ destinationIssueId + ", issueLinkTypeId='" + issueLinkTypeId + '\'' + ", projectGroup="
+				+ context.projectGroupName() + ']';
 	}
 }

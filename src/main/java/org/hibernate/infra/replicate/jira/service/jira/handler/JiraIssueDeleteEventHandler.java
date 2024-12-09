@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
@@ -18,7 +18,7 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 	private final String key;
 
-	public JiraIssueDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id,
+	public JiraIssueDeleteEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long id,
 			String key) {
 		super(reportingConfig, context, id);
 		this.key = key;
@@ -52,7 +52,7 @@ public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 
 	private void handleDeletedMovedIssue(String type) {
 		try {
-			String destinationKey = toDestinationKey(key);
+			String destinationKey = context.contextForOriginalProjectKey(toProjectFromKey(key)).toDestinationKey(key);
 			JiraIssue issue = context.destinationJiraClient().getIssue(destinationKey);
 			JiraIssue updated = new JiraIssue();
 
@@ -99,7 +99,7 @@ public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraIssueDeleteEventHandler[" + "key='" + key + '\'' + ", objectId=" + objectId + ", project="
-				+ context.projectName() + ']';
+		return "JiraIssueDeleteEventHandler[" + "key='" + key + '\'' + ", objectId=" + objectId + ", projectGroup="
+				+ context.projectGroupName() + ']';
 	}
 }

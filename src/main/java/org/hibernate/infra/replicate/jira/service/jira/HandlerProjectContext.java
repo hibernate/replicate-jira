@@ -1,7 +1,5 @@
 package org.hibernate.infra.replicate.jira.service.jira;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +17,6 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulk;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import io.quarkus.logging.Log;
@@ -34,46 +31,26 @@ public final class HandlerProjectContext implements AutoCloseable {
 	private final ReentrantLock versionLock = new ReentrantLock();
 
 	private final String projectName;
-	private final String projectGroupName;
-	private final JiraRestClient sourceJiraClient;
-	private final JiraRestClient destinationJiraClient;
 	private final HandlerProjectGroupContext projectGroupContext;
 	private final JiraConfig.JiraProject project;
 	private final AtomicLong currentIssueKeyNumber;
 	private final JiraIssueBulk bulk;
 
 	private final String projectKeyWithDash;
-	private final JiraUser notMappedAssignee;
-
-	private final Map<String, HandlerProjectContext> allProjectsContextMap;
-	private final Pattern sourceLabelPattern;
-	private final DateTimeFormatter formatter;
-
 	private final Map<String, JiraVersion> destFixVersions;
+	private final Pattern keyToUpdatePattern;
 
-	public HandlerProjectContext(String projectName, String projectGroupName, JiraRestClient sourceJiraClient,
-			JiraRestClient destinationJiraClient, HandlerProjectGroupContext projectGroupContext,
-			Map<String, HandlerProjectContext> allProjectsContextMap) {
+	public HandlerProjectContext(String projectName, HandlerProjectGroupContext projectGroupContext) {
 		this.projectName = projectName;
-		this.projectGroupName = projectGroupName;
-		this.sourceJiraClient = sourceJiraClient;
-		this.destinationJiraClient = destinationJiraClient;
 		this.projectGroupContext = projectGroupContext;
 		this.project = projectGroup().projects().get(projectName());
 		this.currentIssueKeyNumber = new AtomicLong(getCurrentLatestJiraIssueKeyNumber());
 		this.bulk = new JiraIssueBulk(createIssuePlaceholder(), ISSUES_PER_REQUEST);
 		this.projectKeyWithDash = "%s-".formatted(project.projectKey());
 
-		this.notMappedAssignee = projectGroup().users().notMappedAssignee()
-				.map(v -> new JiraUser(projectGroup().users().mappedPropertyName(), v)).orElse(null);
-
-		this.allProjectsContextMap = allProjectsContextMap;
-		this.sourceLabelPattern = Pattern
-				.compile(projectGroupContext.projectGroup().formatting().labelTemplate().formatted(".+"));
-		this.formatter = DateTimeFormatter.ofPattern(projectGroupContext.projectGroup().formatting().timestampFormat());
-
-		this.destFixVersions = getAndCreateMissingCurrentFixVersions(project, projectGroupContext, sourceJiraClient,
-				destinationJiraClient);
+		this.destFixVersions = getAndCreateMissingCurrentFixVersions(project, projectGroupContext,
+				projectGroupContext.sourceJiraClient(), projectGroupContext.destinationJiraClient());
+		this.keyToUpdatePattern = Pattern.compile("^%s-\\d+".formatted(project.originalProjectKey()));
 	}
 
 	public JiraConfig.JiraProject project() {
@@ -82,18 +59,6 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public String projectName() {
 		return projectName;
-	}
-
-	public String projectGroupName() {
-		return projectGroupName;
-	}
-
-	public JiraRestClient sourceJiraClient() {
-		return sourceJiraClient;
-	}
-
-	public JiraRestClient destinationJiraClient() {
-		return destinationJiraClient;
 	}
 
 	public JiraConfig.JiraProjectGroup projectGroup() {
@@ -105,8 +70,9 @@ public final class HandlerProjectContext implements AutoCloseable {
 	}
 
 	public Long getLargestSyncedJiraIssueKeyNumber() {
-		JiraIssues issues = destinationJiraClient.find("project = %s and summary !~\"%s\" ORDER BY key DESC"
-				.formatted(project.projectId(), SYNC_ISSUE_PLACEHOLDER_SUMMARY), 0, 1);
+		JiraIssues issues = projectGroupContext.destinationJiraClient()
+				.find("project = %s and summary !~\"%s\" ORDER BY key DESC".formatted(project.projectId(),
+						SYNC_ISSUE_PLACEHOLDER_SUMMARY), 0, 1);
 		if (issues.issues.isEmpty()) {
 			return 0L;
 		} else {
@@ -123,7 +89,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 			query = "project = %s ORDER BY key ASC".formatted(project.originalProjectKey(),
 					project.originalProjectKey());
 		}
-		JiraIssues issues = sourceJiraClient.find(query, 0, 1);
+		JiraIssues issues = projectGroupContext.sourceJiraClient().find(query, 0, 1);
 		if (issues.issues.isEmpty()) {
 			return Optional.empty();
 		} else {
@@ -133,7 +99,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	private Long getCurrentLatestJiraIssueKeyNumber() {
 		try {
-			JiraIssues issues = destinationJiraClient
+			JiraIssues issues = projectGroupContext.destinationJiraClient()
 					.find("project = %s ORDER BY created DESC".formatted(project.projectId()), 0, 1);
 			if (issues.issues.isEmpty()) {
 				return 0L;
@@ -165,7 +131,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 		}
 		try {
 			do {
-				JiraIssueBulkResponse response = destinationJiraClient.create(bulk);
+				JiraIssueBulkResponse response = projectGroupContext.destinationJiraClient().create(bulk);
 				response.issues.stream().mapToLong(i -> JiraIssue.keyToLong(i.key)).max()
 						.ifPresent(currentIssueKeyNumber::set);
 				Log.infof(
@@ -183,10 +149,6 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	public void startProcessingDownstreamEvent() throws InterruptedException {
 		projectGroupContext.startProcessingDownstreamEvent();
-	}
-
-	public JiraUser notMappedAssignee() {
-		return notMappedAssignee;
 	}
 
 	private boolean requiredIssueKeyNumberShouldBeAvailable(Long key) {
@@ -214,15 +176,13 @@ public final class HandlerProjectContext implements AutoCloseable {
 
 	@Override
 	public String toString() {
-		return "HandlerProjectContext[" + "projectName=" + projectName + ", " + "projectGroupName=" + projectGroupName
-				+ ", " + "sourceJiraClient=" + sourceJiraClient + ", " + "destinationJiraClient="
-				+ destinationJiraClient + ", " + "projectGroup=" + projectGroupContext.projectGroup() + ", "
-				+ "currentIssueKeyNumber=" + currentIssueKeyNumber + ']';
+		return "HandlerProjectContext[" + "projectName=" + projectName + ", " + "projectGroup="
+				+ projectGroupContext.projectGroup() + ", " + "currentIssueKeyNumber=" + currentIssueKeyNumber + ']';
 	}
 
 	@Override
 	public void close() {
-		projectGroupContext.close();
+		// do nothing
 	}
 
 	public int pendingEventsInCurrentContext() {
@@ -241,22 +201,6 @@ public final class HandlerProjectContext implements AutoCloseable {
 		projectGroupContext.submitDownstreamTask(runnable);
 	}
 
-	public Optional<HandlerProjectContext> contextForProjectInSameGroup(String project) {
-		if (!projectGroup().projects().containsKey(project)) {
-			// different project group, don't bother
-			return Optional.empty();
-		}
-		return Optional.ofNullable(allProjectsContextMap.get(project));
-	}
-
-	public boolean isSourceLabel(String label) {
-		return sourceLabelPattern.matcher(label).matches();
-	}
-
-	public String formatTimestamp(ZonedDateTime time) {
-		return time != null ? time.format(formatter) : "";
-	}
-
 	public JiraVersion fixVersion(JiraVersion version) {
 		return fixVersion(version, false);
 	}
@@ -271,11 +215,13 @@ public final class HandlerProjectContext implements AutoCloseable {
 		versionLock.lock();
 		try {
 			if (force) {
-				return destFixVersions.compute(version.name, (name, current) -> upsert(project, projectGroupContext,
-						destinationJiraClient, version, destinationJiraClient().versions(project.projectKey())));
+				return destFixVersions.compute(version.name,
+						(name, current) -> upsert(project, projectGroupContext,
+								projectGroupContext.destinationJiraClient(), version,
+								projectGroupContext.destinationJiraClient().versions(project.projectKey())));
 			} else {
-				return destFixVersions.computeIfAbsent(version.name,
-						name -> upsert(project, projectGroupContext, destinationJiraClient, version, List.of()));
+				return destFixVersions.computeIfAbsent(version.name, name -> upsert(project, projectGroupContext,
+						projectGroupContext.destinationJiraClient(), version, List.of()));
 			}
 		} catch (Exception e) {
 			Log.errorf(e,
@@ -291,8 +237,8 @@ public final class HandlerProjectContext implements AutoCloseable {
 		versionLock.lock();
 		try {
 			destFixVersions.clear();
-			destFixVersions.putAll(getAndCreateMissingCurrentFixVersions(project, projectGroupContext, sourceJiraClient,
-					destinationJiraClient));
+			destFixVersions.putAll(getAndCreateMissingCurrentFixVersions(project, projectGroupContext,
+					projectGroupContext.sourceJiraClient(), projectGroupContext.destinationJiraClient()));
 		} finally {
 			versionLock.unlock();
 		}
@@ -360,19 +306,22 @@ public final class HandlerProjectContext implements AutoCloseable {
 				|| !Objects.equals(upstreamVersion.releaseDate, downstreamVersion.releaseDate);
 	}
 
-	public boolean isUserIgnored(String triggeredByUser) {
-		return projectGroupContext.projectGroup().users().ignoredUpstreamUsers().contains(triggeredByUser);
-	}
-
-	public boolean isDownstreamUserIgnored(String triggeredByUser) {
-		return projectGroupContext.projectGroup().users().ignoredDownstreamUsers().contains(triggeredByUser);
-	}
-
 	public String upstreamUser(String mappedValue) {
 		return projectGroupContext.upstreamUser(mappedValue);
 	}
 
 	public String upstreamStatus(String mappedValue) {
 		return projectGroupContext.upstreamStatus(mappedValue);
+	}
+
+	public String toDestinationKey(String key) {
+		if (keyToUpdatePattern.matcher(key).matches()) {
+			return "%s-%d".formatted(project().projectKey(), JiraIssue.keyToLong(key));
+		}
+		return key;
+	}
+
+	public String toSourceKey(String key) {
+		return "%s-%d".formatted(project().originalProjectKey(), JiraIssue.keyToLong(key));
 	}
 }

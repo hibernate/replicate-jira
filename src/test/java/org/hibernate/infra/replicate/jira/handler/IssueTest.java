@@ -4,12 +4,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.mock.SampleJiraRestClient;
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraCommentDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraCommentUpsertEventHandler;
@@ -45,18 +41,12 @@ class IssueTest {
 	@Inject
 	JiraConfig jiraConfig;
 
-	HandlerProjectContext context;
+	HandlerProjectGroupContext context;
 
 	@BeforeEach
 	void setUp() {
-		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
-		HandlerProjectGroupContext projectGroupContext = new HandlerProjectGroupContext(
-				jiraConfig.projectGroup().get(PROJECT_GROUP_NAME));
-		context = new HandlerProjectContext("JIRATEST1", PROJECT_GROUP_NAME, source, destination, projectGroupContext,
-				contextMap);
-		contextMap.put("JIRATEST1", context);
-		contextMap.put("JIRATEST2", new HandlerProjectContext("JIRATEST2", PROJECT_GROUP_NAME, source, destination,
-				projectGroupContext, contextMap));
+		context = new HandlerProjectGroupContext(PROJECT_GROUP_NAME, jiraConfig.projectGroup().get(PROJECT_GROUP_NAME),
+				source, destination);
 	}
 
 	@AfterEach
