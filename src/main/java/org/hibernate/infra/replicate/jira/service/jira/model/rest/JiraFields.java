@@ -13,7 +13,7 @@ public class JiraFields extends JiraBaseObject {
 	public String description;
 	public JiraSimpleObject priority = new JiraSimpleObject();
 	public JiraSimpleObject issuetype = new JiraSimpleObject();
-	public JiraSimpleObject project = new JiraSimpleObject();
+	public JiraProject project = new JiraProject();
 	public JiraSimpleObject status;
 	public List<String> labels;
 

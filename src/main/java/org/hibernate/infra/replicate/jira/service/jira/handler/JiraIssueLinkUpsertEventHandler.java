@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Optional;
 
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
@@ -14,7 +15,8 @@ import jakarta.ws.rs.core.UriBuilder;
 
 public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 
-	public JiraIssueLinkUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
+	public JiraIssueLinkUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
+			Long id) {
 		super(reportingConfig, context, id);
 	}
 
@@ -29,22 +31,24 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 			return;
 		}
 
-		// make sure that both sides of the link exist:
-		String outwardIssue = toDestinationKey(sourceLink.outwardIssue.key);
-		String inwardIssue = toDestinationKey(sourceLink.inwardIssue.key);
+		Optional<HandlerProjectContext> outwardContextHolder = context
+				.findContextForOriginalProjectKey(toProjectFromKey(sourceLink.outwardIssue.key));
+		Optional<HandlerProjectContext> inwardContextHolder = context
+				.findContextForOriginalProjectKey(toProjectFromKey(sourceLink.inwardIssue.key));
 
-		Optional<HandlerProjectContext> outwardContext = context
-				.contextForProjectInSameGroup(toProjectFromKey(outwardIssue));
-
-		Optional<HandlerProjectContext> inwardContext = context
-				.contextForProjectInSameGroup(toProjectFromKey(inwardIssue));
-		if (inwardContext.isPresent() && outwardContext.isPresent()) {
+		if (inwardContextHolder.isPresent() && outwardContextHolder.isPresent()) {
 			// means we want to create a simple issue between two projects in the same
 			// project group
 			// so it'll be a regular issue link:
 
-			inwardContext.get().createNextPlaceholderBatch(outwardIssue);
-			outwardContext.get().createNextPlaceholderBatch(inwardIssue);
+			HandlerProjectContext inwardContext = inwardContextHolder.get();
+			HandlerProjectContext outwardContext = outwardContextHolder.get();
+
+			// make sure that both sides of the link exist:
+			String outwardIssue = outwardContext.toDestinationKey(sourceLink.outwardIssue.key);
+			String inwardIssue = inwardContext.toDestinationKey(sourceLink.inwardIssue.key);
+			inwardContext.createNextPlaceholderBatch(outwardIssue);
+			outwardContext.createNextPlaceholderBatch(inwardIssue);
 			JiraIssue issue = context.destinationJiraClient().getIssue(inwardIssue);
 
 			if (issue.fields.issuelinks != null) {
@@ -63,10 +67,12 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 			toCreate.inwardIssue.key = inwardIssue;
 			toCreate.outwardIssue.key = outwardIssue;
 			context.destinationJiraClient().upsertIssueLink(toCreate);
-		} else if (outwardContext.isPresent()) {
-			createAsRemoteLink(sourceLink, inwardIssue, sourceLink.inwardIssue.id, outwardIssue);
-		} else if (inwardContext.isPresent()) {
-			createAsRemoteLink(sourceLink, outwardIssue, sourceLink.outwardIssue.id, inwardIssue);
+		} else if (outwardContextHolder.isPresent()) {
+			createAsRemoteLink(sourceLink, sourceLink.inwardIssue.key, sourceLink.inwardIssue.id,
+					outwardContextHolder.get().toDestinationKey(sourceLink.outwardIssue.key));
+		} else if (inwardContextHolder.isPresent()) {
+			createAsRemoteLink(sourceLink, sourceLink.outwardIssue.key, sourceLink.outwardIssue.id,
+					inwardContextHolder.get().toDestinationKey(sourceLink.inwardIssue.key));
 		} else {
 			failureCollector.warning("Couldn't find a suitable way to process the issue link for %s".formatted(this));
 		}
@@ -91,6 +97,7 @@ public class JiraIssueLinkUpsertEventHandler extends JiraEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraIssueLinkUpsertEventHandler[" + "objectId=" + objectId + ", project=" + context.projectName() + ']';
+		return "JiraIssueLinkUpsertEventHandler[" + "objectId=" + objectId + ", projectGroup="
+				+ context.projectGroupName() + ']';
 	}
 }

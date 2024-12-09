@@ -6,10 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
@@ -26,14 +25,12 @@ public abstract class JiraEventHandler implements Runnable {
 
 	protected final Long objectId;
 	protected final FailureCollector failureCollector;
-	protected final HandlerProjectContext context;
-	private final Pattern keyToUpdatePattern;
+	protected final HandlerProjectGroupContext context;
 
-	protected JiraEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
+	protected JiraEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long id) {
 		this.objectId = id;
 		this.failureCollector = FailureCollector.collector(reportingConfig);
 		this.context = context;
-		this.keyToUpdatePattern = Pattern.compile("^%s-\\d+".formatted(context.project().originalProjectKey()));
 	}
 
 	protected static URI createJiraIssueUri(JiraIssue sourceIssue) {
@@ -201,13 +198,6 @@ public abstract class JiraEventHandler implements Runnable {
 			content = content.substring(0, MAX_CONTENT_SIZE);
 		}
 		return content;
-	}
-
-	protected String toDestinationKey(String key) {
-		if (keyToUpdatePattern.matcher(key).matches()) {
-			return "%s-%d".formatted(context.project().projectKey(), JiraIssue.keyToLong(key));
-		}
-		return key;
 	}
 
 	protected String toProjectFromKey(String key) {

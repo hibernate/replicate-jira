@@ -33,22 +33,23 @@ class SimpleProjectHookTest {
 
 	@Test
 	void unknown() {
-		given().when().body(REQUEST_BODY).contentType(ContentType.JSON).post("api/jira/webhooks/NOTAPROJECTKEY").then()
-				.statusCode(400).body(containsString("The NOTAPROJECTKEY project is not configured"));
+		given().when().body(REQUEST_BODY).contentType(ContentType.JSON)
+				.post("api/jira/webhooks/source/NOTAPROJECTGROUPKEY").then().statusCode(400)
+				.body(containsString("The NOTAPROJECTGROUPKEY project group is not configured"));
 	}
 
 	@Test
 	void known() {
 		given().when().body(REQUEST_BODY)
 				.header("x-hub-signature", RequestSignatureFilter.sign("not-a-secret", REQUEST_BODY))
-				.contentType(ContentType.JSON).post("api/jira/webhooks/JIRATEST1").then().statusCode(200)
+				.contentType(ContentType.JSON).post("api/jira/webhooks/source/hibernate").then().statusCode(200)
 				.body(is("ack"));
 	}
 
 	@Test
 	void knownNoHeader() {
-		given().when().body(REQUEST_BODY).contentType(ContentType.JSON).post("api/jira/webhooks/JIRATEST1").then()
-				.statusCode(401);
+		given().when().body(REQUEST_BODY).contentType(ContentType.JSON).post("api/jira/webhooks/source/hibernate")
+				.then().statusCode(401);
 	}
 
 }

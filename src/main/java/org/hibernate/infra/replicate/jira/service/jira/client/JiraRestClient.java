@@ -12,6 +12,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraProject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
@@ -176,6 +177,10 @@ public interface JiraRestClient {
 	@PUT
 	@Path("/issue/{issueKey}/assignee")
 	void assign(@PathParam("issueKey") String id, JiraUser assignee);
+
+	@GET
+	@Path("/project/{projectId}")
+	JiraProject project(String projectId);
 
 	@ClientObjectMapper
 	static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {

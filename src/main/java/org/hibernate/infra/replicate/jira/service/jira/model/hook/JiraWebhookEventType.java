@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraCommentDeleteEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraCommentUpsertEventHandler;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraIssueDeleteEventHandler;
@@ -19,7 +19,7 @@ public enum JiraWebhookEventType {
 	ISSUE_CREATED("jira:issue_created") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.issue == null || event.issue.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue event but issue id is null: %s".formatted(event));
@@ -30,7 +30,7 @@ public enum JiraWebhookEventType {
 	ISSUE_UPDATED("jira:issue_updated") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.issue == null || event.issue.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue event but issue id is null: %s".formatted(event));
@@ -41,7 +41,7 @@ public enum JiraWebhookEventType {
 	ISSUE_DELETED("jira:issue_deleted") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.issue == null || event.issue.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue event but issue id is null: %s".formatted(event));
@@ -52,7 +52,7 @@ public enum JiraWebhookEventType {
 	ISSUELINK_CREATED("issuelink_created") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.issueLink == null || event.issueLink.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue link event but source issue id is null: %s".formatted(event));
@@ -65,7 +65,7 @@ public enum JiraWebhookEventType {
 	ISSUELINK_DELETED("issuelink_deleted") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.issueLink == null || event.issueLink.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle an issue link event but source issue id is null: %s".formatted(event));
@@ -80,7 +80,7 @@ public enum JiraWebhookEventType {
 	COMMENT_CREATED("comment_created") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.comment == null || event.comment.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle a comment event but comment id is null: %s".formatted(event));
@@ -96,7 +96,7 @@ public enum JiraWebhookEventType {
 	COMMENT_UPDATED("comment_updated") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.comment == null || event.comment.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle a comment event but comment id is null: %s".formatted(event));
@@ -112,7 +112,7 @@ public enum JiraWebhookEventType {
 	COMMENT_DELETED("comment_deleted") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.comment == null || event.comment.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle a comment event but comment id is null: %s".formatted(event));
@@ -124,7 +124,7 @@ public enum JiraWebhookEventType {
 	VERSION_CREATED("jira:version_created") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.version == null || event.version.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle a version event but version id is null: %s".formatted(event));
@@ -135,7 +135,7 @@ public enum JiraWebhookEventType {
 	VERSION_UPDATED("jira:version_updated") {
 		@Override
 		public Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-				HandlerProjectContext context) {
+				HandlerProjectGroupContext context) {
 			if (event.version == null || event.version.id == null) {
 				throw new IllegalStateException(
 						"Trying to handle a version event but version id is null: %s".formatted(event));
@@ -167,5 +167,5 @@ public enum JiraWebhookEventType {
 	}
 
 	public abstract Collection<Runnable> handlers(ReportingConfig reportingConfig, JiraWebHookEvent event,
-			HandlerProjectContext context);
+			HandlerProjectGroupContext context);
 }

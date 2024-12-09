@@ -36,13 +36,11 @@ import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.scheduler.Scheduler;
 import io.quarkus.vertx.http.ManagementInterface;
-import io.vertx.core.json.JsonObject;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.ws.rs.core.MediaType;
 
 @ApplicationScoped
 public class JiraService {
@@ -50,24 +48,22 @@ public class JiraService {
 	private static final String SYSTEM_USER = "94KJcxFzgxZlXyTss4oR0rDNqtjwjhIiZLzYNx0Mwuc=";
 
 	private final ReportingConfig reportingConfig;
-	private final Map<String, HandlerProjectContext> contextPerProject;
+	private final Map<String, HandlerProjectGroupContext> contextPerProjectGroup;
 	private final JiraConfig jiraConfig;
 	private final Scheduler scheduler;
 
 	@Inject
 	public JiraService(JiraConfig jiraConfig, ReportingConfig reportingConfig, Scheduler scheduler) {
-		Map<String, HandlerProjectContext> contextMap = new HashMap<>();
+		Map<String, HandlerProjectGroupContext> contextMap = new HashMap<>();
 		for (var entry : jiraConfig.projectGroup().entrySet()) {
 			JiraRestClient source = JiraRestClientBuilder.of(entry.getValue().source());
 			JiraRestClient destination = JiraRestClientBuilder.of(entry.getValue().destination());
-			HandlerProjectGroupContext groupContext = new HandlerProjectGroupContext(entry.getValue());
-			for (var project : entry.getValue().projects().entrySet()) {
-				contextMap.put(project.getKey(), new HandlerProjectContext(project.getKey(), entry.getKey(), source,
-						destination, groupContext, contextMap));
-			}
+			HandlerProjectGroupContext groupContext = new HandlerProjectGroupContext(entry.getKey(), entry.getValue(),
+					source, destination);
+			contextMap.put(entry.getKey(), groupContext);
 		}
 
-		this.contextPerProject = Collections.unmodifiableMap(contextMap);
+		this.contextPerProjectGroup = Collections.unmodifiableMap(contextMap);
 		this.reportingConfig = reportingConfig;
 
 		configureScheduledTasks(scheduler, jiraConfig);
@@ -86,55 +82,32 @@ public class JiraService {
 	}
 
 	public void registerManagementRoutes(@Observes ManagementInterface mi) {
-		mi.router().get("/sync/issues/init").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
-			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString("project");
-
-			HandlerProjectContext context = contextPerProject.get(project);
-
-			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
-			}
-
-			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(context.getLargestSyncedJiraIssueKeyNumber());
-
-			String identity = "Init Sync for project %s".formatted(project);
-			scheduler.newJob(identity).setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP)
-					// every 10 seconds:
-					.setCron("0/10 * * * * ?").setTask(executionContext -> {
-						Optional<JiraIssue> issueToSync = context
-								.getNextIssueToSync(largestSyncedJiraIssueKeyNumber.get());
-						if (issueToSync.isEmpty()) {
-							scheduler.unscheduleJob(identity);
-						} else {
-							triggerSyncEvent(issueToSync.get(), context);
-							largestSyncedJiraIssueKeyNumber.set(JiraIssue.keyToLong(issueToSync.get().key));
-						}
-					}).schedule();
-			rc.end();
-		});
-		mi.router().get("/sync/issues/init/:project").blockingHandler(rc -> {
+		mi.router().get("/sync/issues/init/:projectGroup/:project").blockingHandler(rc -> {
 			// TODO: we can remove this one once we figure out why POST management does not
 			// work correctly...
+			String projectGroup = rc.pathParam("projectGroup");
 			String project = rc.pathParam("project");
 			List<String> maxToSyncList = rc.queryParam("maxToSync");
 			AtomicInteger maxToSync = maxToSyncList.isEmpty()
 					? null
 					: new AtomicInteger(Integer.parseInt(maxToSyncList.get(0)) + 1);
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project group '%s'".formatted(projectGroup));
 			}
 
-			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(context.getLargestSyncedJiraIssueKeyNumber());
+			HandlerProjectContext projectContext = context.contextForOriginalProjectKey(project);
+
+			AtomicLong largestSyncedJiraIssueKeyNumber = new AtomicLong(
+					projectContext.getLargestSyncedJiraIssueKeyNumber());
 			BooleanSupplier continueSyncing = maxToSync == null ? () -> true : () -> maxToSync.decrementAndGet() > 0;
 			String identity = "Init Sync for project %s".formatted(project);
 			scheduler.newJob(identity).setConcurrentExecution(Scheduled.ConcurrentExecution.SKIP)
 					// every 10 seconds:
 					.setCron("0/10 * * * * ?").setTask(executionContext -> {
-						Optional<JiraIssue> issueToSync = context
+						Optional<JiraIssue> issueToSync = projectContext
 								.getNextIssueToSync(largestSyncedJiraIssueKeyNumber.get());
 						if (issueToSync.isEmpty() || !continueSyncing.getAsBoolean()) {
 							scheduler.unscheduleJob(identity);
@@ -145,29 +118,29 @@ public class JiraService {
 					}).schedule();
 			rc.end();
 		});
-		mi.router().get("/sync/issues/re-sync/:project/:issue").blockingHandler(rc -> {
+		mi.router().get("/sync/issues/re-sync/:projectGroup/:issue").blockingHandler(rc -> {
 			// TODO: we can remove this one once we figure out why POST management does not
 			// work correctly...
-			String project = rc.pathParam("project");
+			String projectGroup = rc.pathParam("projectGroup");
 			String issue = rc.pathParam("issue");
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
 			triggerSyncEvent(context.sourceJiraClient().getIssue(issue), context);
 			rc.end();
 		});
-		mi.router().get("/sync/issues/deleted/:project").blockingHandler(rc -> {
-			String project = rc.pathParam("project");
+		mi.router().get("/sync/issues/deleted/:projectGroup").blockingHandler(rc -> {
+			String projectGroup = rc.pathParam("projectGroup");
 			String issues = rc.queryParam("issues").getFirst();
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
 			String[] split = issues.split(",");
@@ -176,16 +149,16 @@ public class JiraService {
 			}
 			rc.end();
 		});
-		mi.router().get("/sync/issues/transition/re-sync/:project").blockingHandler(rc -> {
+		mi.router().get("/sync/issues/transition/re-sync/:projectGroup").blockingHandler(rc -> {
 			// TODO: we can remove this one once we figure out why POST management does not
 			// work correctly...
-			String project = rc.pathParam("project");
+			String projectGroup = rc.pathParam("projectGroup");
 			String query = rc.queryParam("query").getFirst();
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
 			context.submitTask(() -> {
@@ -194,49 +167,30 @@ public class JiraService {
 			});
 			rc.end();
 		});
-		mi.router().post("/sync/issues/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
-			// sync issues based on a list of issue-keys supplied in the JSON body:
-			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString("project");
-			List<String> issueKeys = request.getJsonArray("issues").stream().map(Objects::toString).toList();
-
-			HandlerProjectContext context = contextPerProject.get(project);
-
-			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
-			}
-
-			context.submitTask(() -> {
-				for (String issueKey : issueKeys) {
-					triggerSyncEvent(context.sourceJiraClient().getIssue(issueKey), context);
-				}
-			});
-			rc.end();
-		});
-		mi.router().get("/sync/issues/query/full/:project").blockingHandler(rc -> {
+		mi.router().get("/sync/issues/query/full/:projectGroup").blockingHandler(rc -> {
 			// syncs issue with comments, links etc.
-			String project = rc.pathParam("project");
+			String projectGroup = rc.pathParam("projectGroup");
 			String query = rc.queryParam("query").getFirst();
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
 			context.submitTask(() -> syncByQuery(query, context));
 			rc.end();
 		});
-		mi.router().get("/sync/issues/query/simple/:project").blockingHandler(rc -> {
+		mi.router().get("/sync/issues/query/simple/:projectGroup").blockingHandler(rc -> {
 			// syncs only assignee/body, without links comments and transitions
-			String project = rc.pathParam("project");
+			String projectGroup = rc.pathParam("projectGroup");
 			String query = rc.queryParam("query").getFirst();
 			boolean applyTransitionUpdate = "true".equalsIgnoreCase(rc.queryParam("applyTransitionUpdate").getFirst());
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
 			context.submitTask(() -> syncByQuery(query, context,
@@ -244,46 +198,32 @@ public class JiraService {
 							jiraIssue, applyTransitionUpdate))));
 			rc.end();
 		});
-		mi.router().post("/sync/comments/list").consumes(MediaType.APPLICATION_JSON).blockingHandler(rc -> {
-			JsonObject request = rc.body().asJsonObject();
-			String project = request.getString("project");
-			List<JiraComment> comments = request.getJsonArray("comments").stream().map(Objects::toString)
-					.map(JiraComment::new).toList();
-
-			HandlerProjectContext context = contextPerProject.get(project);
-
-			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
-			}
-
-			// TODO: needs an issue key
-			// can trigger directly as we do not make any REST requests here:
-			triggerCommentSyncEvents(project, null, comments);
-			rc.end();
-		});
-		mi.router().get("/sync/fix-versions/:project").blockingHandler(rc -> {
+		mi.router().get("/sync/fix-versions/:projectGroup/:project").blockingHandler(rc -> {
+			String projectGroup = rc.pathParam("projectGroup");
 			String project = rc.pathParam("project");
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
-			context.submitTask(context::refreshFixVersions);
+			context.submitTask(context.contextForOriginalProjectKey(project)::refreshFixVersions);
 			rc.end();
 		});
-		mi.router().get("/sync/fix-versions/:project/:versionId").blockingHandler(rc -> {
+		mi.router().get("/sync/fix-versions/:projectGroup/:project/:versionId").blockingHandler(rc -> {
+			String projectGroup = rc.pathParam("projectGroup");
 			String project = rc.pathParam("project");
 			String versionId = rc.pathParam("versionId");
 
-			HandlerProjectContext context = contextPerProject.get(project);
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 
 			if (context == null) {
-				throw new IllegalArgumentException("Unknown project '%s'".formatted(project));
+				throw new IllegalArgumentException("Unknown project '%s'".formatted(projectGroup));
 			}
 
-			context.fixVersion(context.sourceJiraClient().version(Long.parseLong(versionId)), true);
+			context.contextForOriginalProjectKey(project)
+					.fixVersion(context.sourceJiraClient().version(Long.parseLong(versionId)), true);
 			rc.end();
 		});
 	}
@@ -295,23 +235,25 @@ public class JiraService {
 	 * the event. It may be that processing will take some time, and it may result
 	 * in a timeout on the hook side.
 	 *
-	 * @param project
-	 *            The project key as defined in the
-	 *            {@link JiraConfig.JiraProjectGroup#projects()}
+	 * @param projectGroup
+	 *            The project group key as defined in the
+	 *            {@link JiraConfig#projectGroup()}
 	 * @param event
 	 *            The body of the event posted by the webhook.
 	 * @param triggeredByUser
 	 *            The ID of the Jira user that triggered the webhook event.
 	 */
-	public void acknowledge(String project, JiraWebHookEvent event, String triggeredByUser) {
+	public void acknowledge(String projectGroup, JiraWebHookEvent event, String triggeredByUser) {
 		event.eventType().ifPresentOrElse(eventType -> {
-			var context = contextPerProject.get(project);
+			var context = contextPerProjectGroup.get(projectGroup);
 			if (context == null) {
 				FailureCollector failureCollector = FailureCollector.collector(reportingConfig);
-				failureCollector.critical("Unable to determine handler context for project %s. Was it not configured ?"
-						.formatted(project));
+				failureCollector
+						.critical("Unable to determine handler context for project group %s. Was it not configured ?"
+								.formatted(projectGroup));
 				failureCollector.close();
-				throw new ConstraintViolationException("Project " + project + " is not configured.", Set.of());
+				throw new ConstraintViolationException("Project group" + projectGroup + " is not configured.",
+						Set.of());
 			}
 
 			if (context.isUserIgnored(triggeredByUser)) {
@@ -327,7 +269,7 @@ public class JiraService {
 
 	public void downstreamAcknowledge(String project, JiraActionEvent event) {
 		event.eventType().ifPresentOrElse(eventType -> {
-			var context = contextPerProject.get(project);
+			var context = contextPerProjectGroup.get(project);
 			if (context == null) {
 				FailureCollector failureCollector = FailureCollector.collector(reportingConfig);
 				failureCollector.critical("Unable to determine handler context for project %s. Was it not configured ?"
@@ -352,13 +294,14 @@ public class JiraService {
 		try (FailureCollector failureCollector = FailureCollector.collector(reportingConfig)) {
 			Log.infof("Starting scheduled sync of issues for the project group %s", projectGroup);
 
+			HandlerProjectGroupContext context = contextPerProjectGroup.get(projectGroup);
 			JiraConfig.JiraProjectGroup group = jiraConfig.projectGroup().get(projectGroup);
 			for (String project : group.projects().keySet()) {
 				Log.infof("Generating issues for %s project.", project);
-				HandlerProjectContext context = contextPerProject.get(project);
 
+				HandlerProjectContext projectContext = context.contextForProject(project);
 				String query = "project=%s and updated >= %s ORDER BY key".formatted(
-						context.project().originalProjectKey(), context.projectGroup().scheduled().timeFilter());
+						projectContext.project().originalProjectKey(), context.projectGroup().scheduled().timeFilter());
 				try {
 					syncByQuery(query, context);
 				} catch (Exception e) {
@@ -374,7 +317,7 @@ public class JiraService {
 
 	@PreDestroy
 	public void finishProcessingAndShutdown() {
-		for (HandlerProjectContext context : contextPerProject.values()) {
+		for (HandlerProjectGroupContext context : contextPerProjectGroup.values()) {
 			try {
 				context.close();
 			} catch (Exception e) {
@@ -383,11 +326,11 @@ public class JiraService {
 		}
 	}
 
-	private void syncByQuery(String query, HandlerProjectContext context) {
+	private void syncByQuery(String query, HandlerProjectGroupContext context) {
 		syncByQuery(query, context, jiraIssue -> triggerSyncEvent(jiraIssue, context));
 	}
 
-	private void syncByQuery(String query, HandlerProjectContext context, Consumer<JiraIssue> action) {
+	private void syncByQuery(String query, HandlerProjectGroupContext context, Consumer<JiraIssue> action) {
 		JiraIssues issues = null;
 		int start = 0;
 		int max = 100;
@@ -401,7 +344,7 @@ public class JiraService {
 		} while (!issues.issues.isEmpty());
 	}
 
-	private void triggerSyncEvent(JiraIssue jiraIssue, HandlerProjectContext context) {
+	private void triggerSyncEvent(JiraIssue jiraIssue, HandlerProjectGroupContext context) {
 		Log.infof("Adding sync events for a jira issue: %s; Already queued events: %s", jiraIssue.key,
 				context.pendingEventsInCurrentContext());
 

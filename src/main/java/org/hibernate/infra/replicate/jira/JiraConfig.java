@@ -98,6 +98,11 @@ public interface JiraConfig {
 		 * Allows customizing formatting options.
 		 */
 		Formatting formatting();
+
+		/**
+		 * Allows enabling signature verification.
+		 */
+		WebHookSecurity security();
 	}
 
 	interface Formatting {
@@ -187,11 +192,6 @@ public interface JiraConfig {
 		 * the info.
 		 */
 		String originalProjectKey();
-
-		/**
-		 * Allows enabling signature verification.
-		 */
-		WebHookSecurity security();
 
 		/**
 		 * Allows enabling signature verification of downstream events.

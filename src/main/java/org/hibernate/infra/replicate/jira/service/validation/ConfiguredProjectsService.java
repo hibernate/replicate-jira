@@ -13,12 +13,15 @@ public class ConfiguredProjectsService {
 
 	private final Set<String> upstreamProjects;
 	private final Set<String> downstreamProjects;
+	private final Set<String> projectGroups;
 
 	public ConfiguredProjectsService(JiraConfig jiraConfig) {
 		Set<String> down = new HashSet<>();
 		Set<String> up = new HashSet<>();
-		for (JiraConfig.JiraProjectGroup group : jiraConfig.projectGroup().values()) {
-			for (JiraConfig.JiraProject project : group.projects().values()) {
+		Set<String> groups = new HashSet<>();
+		for (var group : jiraConfig.projectGroup().entrySet()) {
+			groups.add(group.getKey());
+			for (JiraConfig.JiraProject project : group.getValue().projects().values()) {
 				up.add(project.originalProjectKey());
 				down.add(project.projectKey());
 			}
@@ -26,6 +29,7 @@ public class ConfiguredProjectsService {
 
 		upstreamProjects = Collections.unmodifiableSet(up);
 		downstreamProjects = Collections.unmodifiableSet(down);
+		projectGroups = Collections.unmodifiableSet(groups);
 	}
 
 	public boolean isUpstreamProject(String projectName) {
@@ -34,5 +38,9 @@ public class ConfiguredProjectsService {
 
 	public boolean isDownstreamProject(String projectName) {
 		return downstreamProjects.contains(projectName);
+	}
+
+	public boolean isProjectGroup(String value) {
+		return projectGroups.contains(value);
 	}
 }
