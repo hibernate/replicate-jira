@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import org.hibernate.infra.replicate.jira.JiraConfig;
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
@@ -27,7 +28,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 
 	private static final Pattern FIX_VERSION_PATTERN = Pattern.compile("Fix_version:.++");
 
-	public JiraIssueAbstractEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
+	public JiraIssueAbstractEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long id) {
 		super(reportingConfig, context, id);
 	}
 
@@ -47,13 +48,14 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 				jiraTransition -> context.destinationJiraClient().transition(destinationKey, jiraTransition));
 	}
 
-	protected void updateIssueBody(JiraIssue sourceIssue, String destinationKey) {
+	protected void updateIssueBody(HandlerProjectContext projectContext, JiraIssue sourceIssue, String destinationKey) {
 		JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
-		updateIssueBody(sourceIssue, destIssue, destinationKey);
+		updateIssueBody(projectContext, sourceIssue, destIssue, destinationKey);
 	}
 
-	protected void updateIssueBody(JiraIssue sourceIssue, JiraIssue destIssue, String destinationKey) {
-		JiraIssue issue = issueToCreate(sourceIssue, destIssue);
+	protected void updateIssueBody(HandlerProjectContext projectContext, JiraIssue sourceIssue, JiraIssue destIssue,
+			String destinationKey) {
+		JiraIssue issue = issueToCreate(projectContext, sourceIssue, destIssue);
 
 		updateIssue(destinationKey, issue, sourceIssue, context.notMappedAssignee());
 	}
@@ -106,7 +108,8 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		return link;
 	}
 
-	protected JiraIssue issueToCreate(JiraIssue sourceIssue, JiraIssue downstreamIssue) {
+	protected JiraIssue issueToCreate(HandlerProjectContext projectContext, JiraIssue sourceIssue,
+			JiraIssue downstreamIssue) {
 		JiraIssue destinationIssue = new JiraIssue();
 		destinationIssue.fields = new JiraFields();
 
@@ -124,7 +127,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 				? priority(sourceIssue.fields.priority.id).map(JiraSimpleObject::new).orElse(null)
 				: null;
 
-		destinationIssue.fields.project.id = context.project().projectId();
+		destinationIssue.fields.project.id = projectContext.project().projectId();
 
 		destinationIssue.fields.issuetype = issueType(sourceIssue.fields.issuetype.id).map(JiraSimpleObject::new)
 				.orElse(null);
@@ -150,8 +153,10 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		if (!isSubTaskIssue(sourceIssue.fields.issuetype) && sourceIssue.fields.parent != null) {
 			if (isEpicIssue(sourceIssue.fields.parent.fields.issuetype)) {
 				JiraConfig.IssueTypeValueMapping issueTypes = context.projectGroup().issueTypes();
-				issueTypes.epicLinkKeyCustomFieldName().ifPresent(epicLinkCustomFieldName -> destinationIssue.fields
-						.properties().put(epicLinkCustomFieldName, toDestinationKey(sourceIssue.fields.parent.key)));
+				issueTypes.epicLinkKeyCustomFieldName()
+						.ifPresent(epicLinkCustomFieldName -> destinationIssue.fields.properties().put(
+								epicLinkCustomFieldName,
+								projectContext.toDestinationKey(sourceIssue.fields.parent.key)));
 			}
 		}
 		if (isEpicIssue(sourceIssue.fields.issuetype)) {
@@ -168,7 +173,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		if (sourceIssue.fields.fixVersions != null) {
 			destinationIssue.fields.fixVersions = new ArrayList<>();
 			for (JiraVersion version : sourceIssue.fields.fixVersions) {
-				JiraVersion downstream = context.fixVersion(version);
+				JiraVersion downstream = projectContext.fixVersion(version);
 				if (downstream != null) {
 					destinationIssue.fields.fixVersions.add(downstream);
 				}
@@ -178,7 +183,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		if (sourceIssue.fields.versions != null) {
 			destinationIssue.fields.versions = new ArrayList<>();
 			for (JiraVersion version : sourceIssue.fields.versions) {
-				JiraVersion downstream = context.fixVersion(version);
+				JiraVersion downstream = projectContext.fixVersion(version);
 				if (downstream != null) {
 					destinationIssue.fields.versions.add(downstream);
 				}
@@ -237,15 +242,16 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 				.map(JiraTransition::new);
 	}
 
-	protected Optional<JiraIssueLink> prepareParentLink(String destinationKey, JiraIssue sourceIssue) {
+	protected Optional<JiraIssueLink> prepareParentLink(HandlerProjectContext projectContext, String destinationKey,
+			JiraIssue sourceIssue) {
 		// we only add a link for sub-tasks (the ones that have a corresponding types).
 		// Issues assigned to an epic, can also have a parent.
 		// but for those we won't add an extra link:
 		if (sourceIssue.fields.parent != null && isSubTaskIssue(sourceIssue.fields.issuetype)) {
-			String parent = toDestinationKey(sourceIssue.fields.parent.key);
+			String parent = projectContext.toDestinationKey(sourceIssue.fields.parent.key);
 			// we don't really need it, but as usual we are making sure that the issue is
 			// available downstream:
-			context.createNextPlaceholderBatch(parent);
+			projectContext.createNextPlaceholderBatch(parent);
 			JiraIssueLink link = new JiraIssueLink();
 			link.type.id = context.projectGroup().issueLinkTypes().parentLinkType();
 			// "name": "Depend",

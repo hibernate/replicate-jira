@@ -3,7 +3,7 @@ package org.hibernate.infra.replicate.jira.service.jira.handler;
 import java.net.URI;
 import java.util.Optional;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComments;
@@ -12,8 +12,8 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 
-	public JiraCommentUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long commentId,
-			Long issueId) {
+	public JiraCommentUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
+			Long commentId, Long issueId) {
 		super(reportingConfig, context, commentId, issueId);
 	}
 
@@ -22,7 +22,8 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 		JiraIssue issue = context.sourceJiraClient().getIssue(issueId);
 		JiraComment comment = context.sourceJiraClient().getComment(issueId, objectId);
 
-		String destinationKey = toDestinationKey(issue.key);
+		String destinationKey = context.contextForOriginalProjectKey(toProjectFromKey(issue.key))
+				.toDestinationKey(issue.key);
 
 		// We are going to assume that the Jira issue was already synced downstream,
 		// and try to find its comments. If the issue is not yet there, then we'll just
@@ -75,7 +76,7 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraCommentUpsertEventHandler[" + "issueId=" + issueId + ", objectId=" + objectId + ", project="
-				+ context.projectName() + ']';
+		return "JiraCommentUpsertEventHandler[" + "issueId=" + issueId + ", objectId=" + objectId + ", projectGroup="
+				+ context.projectGroupName() + ']';
 	}
 }

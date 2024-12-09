@@ -24,19 +24,21 @@ class RequestSignatureFilterTest {
 		RequestSignatureFilter filter = createFilter(true, "wrong-secret");
 
 		assertThat(filter.checkSignature(requestContext("/path-not-matching-the-pattern"))).isNull();
-		assertThat(filter.checkSignature(requestContext("/jira/webhooks/UNKNOWN"))).isNull();
-		assertThat(filter.checkSignature(requestContext("/jira/webhooks/UNKNOWN", "POST", "smth"))).isNull();
+		assertThat(filter.checkSignature(requestContext("/jira/webhooks/source/UNKNOWN"))).isNull();
+		assertThat(filter.checkSignature(requestContext("/jira/webhooks/source/UNKNOWN", "POST", "smth"))).isNull();
 
-		Response response = filter.checkSignature(requestContext("/jira/webhooks/PROJECT_KEY", "POST", "smth"));
+		Response response = filter
+				.checkSignature(requestContext("/jira/webhooks/source/PROJECT_GROUP_KEY", "POST", "smth"));
 		assertThat(response).isNotNull();
 		assertThat((String) response.getEntity()).contains("Missing x-hub-signature header");
 
-		response = filter.checkSignature(
-				requestContext("/jira/webhooks/PROJECT_KEY", "POST", "smth", Map.of("x-hub-signature", "smth-wrong")));
+		response = filter.checkSignature(requestContext("/jira/webhooks/source/PROJECT_GROUP_KEY", "POST", "smth",
+				Map.of("x-hub-signature", "smth-wrong")));
 		assertThat(response).isNotNull();
 		assertThat((String) response.getEntity()).contains("Signatures do not match");
 
-		ContainerRequestContext requestContext = requestContext("/jira/webhooks/PROJECT_KEY", "POST", "smth",
+		ContainerRequestContext requestContext = requestContext("/jira/webhooks/source/PROJECT_GROUP_KEY", "POST",
+				"smth",
 				Map.of("x-hub-signature", "sha256=beb656dd03b5a81bee94aab4966943bf694929fcd359c45a1947277df2541a5d"));
 		assertThat(filter.checkSignature(requestContext)).isNull();
 		Mockito.verify(requestContext, Mockito.times(1)).setEntityStream(Mockito.any());
@@ -85,7 +87,7 @@ class RequestSignatureFilterTest {
 				return Type.SIGNATURE;
 			}
 		};
-		Mockito.when(project.security()).thenReturn(value);
+		Mockito.when(group.security()).thenReturn(value);
 		Mockito.when(project.downstreamSecurity()).thenReturn(value);
 
 		Mockito.when(group.projects()).thenReturn(Map.of("PROJECT_KEY", project));

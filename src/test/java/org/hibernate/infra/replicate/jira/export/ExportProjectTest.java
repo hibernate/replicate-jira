@@ -124,7 +124,7 @@ class ExportProjectTest {
 					row.add(issueTypeMap.getOrDefault(issue.fields.issuetype.name, ""));
 					row.add(statusMap.getOrDefault(issue.fields.status.name, ""));
 					row.add(issue.fields.project.properties().get("key"));
-					row.add(issue.fields.project.name);
+					row.add(issue.fields.project.properties().get("name"));
 					Object reporter = issue.fields.reporter == null
 							? null
 							: projectGroup.users().mapping().getOrDefault(issue.fields.reporter.accountId, null);

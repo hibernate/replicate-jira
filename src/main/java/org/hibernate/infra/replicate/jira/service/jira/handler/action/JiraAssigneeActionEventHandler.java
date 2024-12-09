@@ -1,6 +1,6 @@
 package org.hibernate.infra.replicate.jira.service.jira.handler.action;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
@@ -8,7 +8,7 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraAssigneeActionEventHandler extends JiraActionEventHandler {
 
-	public JiraAssigneeActionEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context,
+	public JiraAssigneeActionEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
 			JiraActionEvent event) {
 		super(reportingConfig, context, event);
 	}
@@ -29,12 +29,13 @@ public class JiraAssigneeActionEventHandler extends JiraActionEventHandler {
 			user = new JiraUser("-1");
 		}
 		if (user != null) {
-			context.sourceJiraClient().assign(toSourceKey(event.key), user);
+			context.sourceJiraClient().assign(context.contextForProject(event.projectKey).toSourceKey(event.key), user);
 		}
 	}
 
 	@Override
 	public String toString() {
-		return "JiraAssigneeActionEventHandler[" + "event=" + event + ", project=" + context.projectName() + ']';
+		return "JiraAssigneeActionEventHandler[" + "event=" + event + ", projectGroup=" + context.projectGroupName()
+				+ ']';
 	}
 }
