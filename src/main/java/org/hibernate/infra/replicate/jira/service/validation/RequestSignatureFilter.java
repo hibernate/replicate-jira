@@ -31,8 +31,9 @@ import jakarta.ws.rs.core.Response;
 @ApplicationScoped
 public class RequestSignatureFilter {
 
-	private static final Pattern PATH_UPSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/(.+)");
-	private static final Pattern PATH_DOWNSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/mirror/(.+)");
+	private static final Pattern PATH_UPSTREAM_WEBHOOK_PATTERN = Pattern.compile("/jira/webhooks/source/(.+)");
+	private static final Pattern PATH_DOWNSTREAM_WEBHOOK_PATTERN = Pattern
+			.compile("/jira/webhooks/mirror/[^\\/]++/(.+)");
 	private static final BiPredicate<String, byte[]> ALLOW_ALL = (a, b) -> true;
 
 	private final Map<String, BiPredicate<String, byte[]>> upstreamChecks;
@@ -42,9 +43,10 @@ public class RequestSignatureFilter {
 	public RequestSignatureFilter(JiraConfig jiraConfig) {
 		Map<String, BiPredicate<String, byte[]>> up = new HashMap<>();
 		Map<String, BiPredicate<String, byte[]>> down = new HashMap<>();
-		for (JiraConfig.JiraProjectGroup group : jiraConfig.projectGroup().values()) {
-			for (var entry : group.projects().entrySet()) {
-				up.put(entry.getKey(), check(entry.getValue().security()));
+		for (var group : jiraConfig.projectGroup().entrySet()) {
+			up.put(group.getKey(), check(group.getValue().security()));
+
+			for (var entry : group.getValue().projects().entrySet()) {
 				down.put(entry.getKey(), check(entry.getValue().downstreamSecurity()));
 			}
 		}
@@ -85,8 +87,8 @@ public class RequestSignatureFilter {
 				String project = downstream.group(1);
 				check = downstreamChecks.get(project);
 			} else if (upstream.matches()) {
-				String project = upstream.group(1);
-				check = upstreamChecks.get(project);
+				String projectGroup = upstream.group(1);
+				check = upstreamChecks.get(projectGroup);
 			}
 			if (check != null) {
 				String signature = requestContext.getHeaderString("x-hub-signature");

@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.handler.JiraStaticFieldMappingCache;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
@@ -15,14 +15,14 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraTransitionActionEventHandler extends JiraActionEventHandler {
 
-	public JiraTransitionActionEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context,
+	public JiraTransitionActionEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
 			JiraActionEvent event) {
 		super(reportingConfig, context, event);
 	}
 
 	@Override
 	protected void doRun() {
-		String sourceKey = toSourceKey(event.key);
+		String sourceKey = context.contextForProject(event.projectKey).toSourceKey(event.key);
 		JiraIssue issue = context.destinationJiraClient().getIssue(event.key);
 		JiraIssue sourceIssue = context.sourceJiraClient().getIssue(sourceKey);
 
@@ -53,6 +53,7 @@ public class JiraTransitionActionEventHandler extends JiraActionEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraTransitionActionEventHandler[" + "event=" + event + ", project=" + context.projectName() + ']';
+		return "JiraTransitionActionEventHandler[" + "event=" + event + ", projectGroup=" + context.projectGroupName()
+				+ ']';
 	}
 }

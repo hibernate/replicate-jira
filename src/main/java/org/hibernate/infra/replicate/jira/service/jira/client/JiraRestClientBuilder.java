@@ -18,6 +18,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLinkTypes;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraProject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
@@ -284,6 +285,11 @@ public class JiraRestClientBuilder {
 		@Override
 		public void assign(String id, JiraUser assignee) {
 			withRetry(() -> delegate.assign(id, assignee));
+		}
+
+		@Override
+		public JiraProject project(String projectId) {
+			return withRetry(() -> delegate.project(projectId));
 		}
 
 		private static final int RETRIES = 5;

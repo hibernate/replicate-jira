@@ -21,6 +21,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLinkT
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraProject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
@@ -232,6 +233,14 @@ public class SampleJiraRestClient implements JiraRestClient {
 	@Override
 	public void assign(String id, JiraUser assignee) {
 		// ok
+	}
+
+	@Override
+	public JiraProject project(String projectId) {
+		JiraProject project = new JiraProject();
+		project.id = projectId;
+		project.key = "JIRATEST1";
+		return project;
 	}
 
 	private JiraIssueLink sampleIssueLink(Long id) {

@@ -8,6 +8,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraActionEven
 public class JiraActionEvent extends JiraBaseObject {
 	public String id;
 	public String key;
+	public String projectKey;
 	public String event;
 	public String assignee;
 	public String value;
@@ -20,7 +21,7 @@ public class JiraActionEvent extends JiraBaseObject {
 
 	@Override
 	public String toString() {
-		return "JiraActionEvent{" + "id='" + id + '\'' + ", key='" + key + '\'' + ", event='" + event + '\''
-				+ ", assignee='" + assignee + '\'' + ", value='" + value + '\'' + '}';
+		return "JiraActionEvent{" + "id='" + id + '\'' + ", key='" + key + '\'' + ", projectKey='" + projectKey + '\''
+				+ ", event='" + event + '\'' + ", assignee='" + assignee + '\'' + ", value='" + value + '\'' + '}';
 	}
 }

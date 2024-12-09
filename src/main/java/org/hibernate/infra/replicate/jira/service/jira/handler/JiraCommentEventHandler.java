@@ -3,7 +3,7 @@ package org.hibernate.infra.replicate.jira.service.jira.handler;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComment;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraComments;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
@@ -15,7 +15,7 @@ abstract class JiraCommentEventHandler extends JiraEventHandler {
 
 	protected final Long issueId;
 
-	public JiraCommentEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long commentId,
+	public JiraCommentEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long commentId,
 			Long issueId) {
 		super(reportingConfig, context, commentId);
 		this.issueId = issueId;

@@ -1,8 +1,7 @@
 package org.hibernate.infra.replicate.jira.service.jira.handler.action;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.reporting.FailureCollector;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
@@ -12,9 +11,9 @@ public abstract class JiraActionEventHandler implements Runnable {
 
 	protected final JiraActionEvent event;
 	protected final FailureCollector failureCollector;
-	protected final HandlerProjectContext context;
+	protected final HandlerProjectGroupContext context;
 
-	protected JiraActionEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context,
+	protected JiraActionEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
 			JiraActionEvent event) {
 		this.event = event;
 		this.failureCollector = FailureCollector.collector(reportingConfig);
@@ -36,10 +35,6 @@ public abstract class JiraActionEventHandler implements Runnable {
 			Log.infof("Finished processing %s. Pending events in %s to process: %s", this.toString(),
 					context.projectGroupName(), context.pendingDownstreamEventsInCurrentContext());
 		}
-	}
-
-	protected String toSourceKey(String key) {
-		return "%s-%d".formatted(context.project().originalProjectKey(), JiraIssue.keyToLong(key));
 	}
 
 	protected abstract void doRun();

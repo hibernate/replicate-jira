@@ -3,7 +3,7 @@ package org.hibernate.infra.replicate.jira.service.jira.handler.action;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
@@ -12,7 +12,7 @@ import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 abstract class JiraAbstractVersionActionEventHandler extends JiraActionEventHandler {
 
-	public JiraAbstractVersionActionEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context,
+	public JiraAbstractVersionActionEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context,
 			JiraActionEvent event) {
 		super(reportingConfig, context, event);
 	}
@@ -40,7 +40,7 @@ abstract class JiraAbstractVersionActionEventHandler extends JiraActionEventHand
 
 		setVersionList(updated, versions);
 
-		context.sourceJiraClient().update(toSourceKey(event.key), updated);
+		context.sourceJiraClient().update(context.contextForProject(event.projectKey).toSourceKey(event.key), updated);
 	}
 
 	protected abstract void setVersionList(JiraIssue issue, List<JiraVersion> versions);
@@ -49,6 +49,7 @@ abstract class JiraAbstractVersionActionEventHandler extends JiraActionEventHand
 
 	@Override
 	public String toString() {
-		return this.getClass().getSimpleName() + "[" + "event=" + event + ", project=" + context.projectName() + ']';
+		return this.getClass().getSimpleName() + "[" + "event=" + event + ", projectGroup=" + context.projectGroupName()
+				+ ']';
 	}
 }

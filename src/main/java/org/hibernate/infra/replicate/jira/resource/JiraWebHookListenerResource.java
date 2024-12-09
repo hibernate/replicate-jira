@@ -4,6 +4,7 @@ import org.hibernate.infra.replicate.jira.service.jira.JiraService;
 import org.hibernate.infra.replicate.jira.service.jira.model.action.JiraActionEvent;
 import org.hibernate.infra.replicate.jira.service.jira.model.hook.JiraWebHookEvent;
 import org.hibernate.infra.replicate.jira.service.validation.ConfiguredProject;
+import org.hibernate.infra.replicate.jira.service.validation.ConfiguredProjectGroup;
 
 import org.jboss.resteasy.reactive.RestPath;
 
@@ -23,22 +24,22 @@ public class JiraWebHookListenerResource {
 	JiraService jiraService;
 
 	@POST
-	@Path("/{project}")
+	@Path("/source/{projectGroup}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public String somethingHappenedUpstream(@RestPath @NotNull @ConfiguredProject String project,
+	public String somethingHappenedUpstream(@RestPath @NotNull @ConfiguredProjectGroup String projectGroup,
 			@QueryParam("triggeredByUser") String triggeredByUser, JiraWebHookEvent event) {
-		Log.tracef("Received a notification about %s project: %.200s...", project, event);
-		jiraService.acknowledge(project, event, triggeredByUser);
+		Log.tracef("Received a notification about %s project group: %.200s...", projectGroup, event);
+		jiraService.acknowledge(projectGroup, event, triggeredByUser);
 		return "ack";
 	}
 
 	@POST
-	@Path("/mirror/{project}")
+	@Path("/mirror/{projectGroup}/{project}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public String somethingHappenedDownstream(@RestPath @NotNull @ConfiguredProject String project,
-			JiraActionEvent data) {
+	public String somethingHappenedDownstream(@RestPath @NotNull @ConfiguredProjectGroup String projectGroup,
+			@RestPath @NotNull @ConfiguredProject String project, JiraActionEvent data) {
 		Log.tracef("Received a downstream notification about %s project: %s...", project, data);
-		jiraService.downstreamAcknowledge(project, data);
+		jiraService.downstreamAcknowledge(projectGroup, data);
 		return "ack";
 	}
 }

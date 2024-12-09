@@ -1,13 +1,14 @@
 package org.hibernate.infra.replicate.jira.service.jira.handler;
 
 import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectContext;
+import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContext;
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
 public class JiraIssueUpsertEventHandler extends JiraIssueAbstractEventHandler {
 
-	public JiraIssueUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectContext context, Long id) {
+	public JiraIssueUpsertEventHandler(ReportingConfig reportingConfig, HandlerProjectGroupContext context, Long id) {
 		super(reportingConfig, context, id);
 	}
 
@@ -22,16 +23,18 @@ public class JiraIssueUpsertEventHandler extends JiraIssueAbstractEventHandler {
 			return;
 		}
 
-		String destinationKey = toDestinationKey(sourceIssue.key);
+		HandlerProjectContext projectContext = context.contextForOriginalProjectKey(sourceIssue.fields.project.key);
+
+		String destinationKey = projectContext.toDestinationKey(sourceIssue.key);
 		// We don't really need one, but doing so means that we will create the
 		// placeholder for it
 		// if the issue wasn't already present in the destination Jira instance
-		context.createNextPlaceholderBatch(destinationKey);
+		projectContext.createNextPlaceholderBatch(destinationKey);
 
 		try {
 			JiraIssue destIssue = context.destinationJiraClient().getIssue(destinationKey);
 
-			updateIssueBody(sourceIssue, destIssue, destinationKey);
+			updateIssueBody(projectContext, sourceIssue, destIssue, destinationKey);
 			// remote "aka web" links cannot be added in the same request and are also not
 			// returned as part of the issue API.
 			// We "upsert" the remote link pointing to the "original/source" issue that
@@ -41,7 +44,8 @@ public class JiraIssueUpsertEventHandler extends JiraIssueAbstractEventHandler {
 			applyTransition(sourceIssue, destIssue, destinationKey);
 			// and then we want to add a link to a parent, if the issue was actually a
 			// sub-task which we've created as a task:
-			prepareParentLink(destinationKey, sourceIssue).ifPresent(context.destinationJiraClient()::upsertIssueLink);
+			prepareParentLink(projectContext, destinationKey, sourceIssue)
+					.ifPresent(context.destinationJiraClient()::upsertIssueLink);
 		} catch (JiraRestException e) {
 			failureCollector
 					.critical("Unable to update destination issue %s: %s".formatted(destinationKey, e.getMessage()), e);
@@ -50,6 +54,7 @@ public class JiraIssueUpsertEventHandler extends JiraIssueAbstractEventHandler {
 
 	@Override
 	public String toString() {
-		return "JiraIssueUpsertEventHandler[" + "objectId=" + objectId + ", project=" + context.projectName() + ']';
+		return "JiraIssueUpsertEventHandler[" + "objectId=" + objectId + ", projectGroup=" + context.projectGroupName()
+				+ ']';
 	}
 }
