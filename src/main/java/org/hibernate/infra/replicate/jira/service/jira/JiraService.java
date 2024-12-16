@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -356,17 +355,16 @@ public class JiraService {
 		event.webhookEvent = JiraWebhookEventType.ISSUE_UPDATED.getName();
 		event.issue = issue;
 
-		String projectKey = Objects.toString(jiraIssue.fields.project.properties().get("key"));
-		acknowledge(projectKey, event, SYSTEM_USER);
+		acknowledge(context.projectGroupName(), event, SYSTEM_USER);
 
 		// now sync comments:
 		if (jiraIssue.fields.comment != null && jiraIssue.fields.comment.comments != null) {
-			triggerCommentSyncEvents(projectKey, issue, jiraIssue.fields.comment.comments);
+			triggerCommentSyncEvents(context.projectGroupName(), issue, jiraIssue.fields.comment.comments);
 		} else {
 			// comments not always come in the jira request... so if we didn't get any, just
 			// in case we will query for them:
 			JiraComments comments = context.sourceJiraClient().getComments(jiraIssue.id, 0, 500);
-			triggerCommentSyncEvents(projectKey, issue, comments.comments);
+			triggerCommentSyncEvents(context.projectGroupName(), issue, comments.comments);
 		}
 
 		// and links:
@@ -377,7 +375,7 @@ public class JiraService {
 				event.issueLink = new JiraWebHookIssueLink();
 				event.issueLink.id = Long.parseLong(link.id);
 
-				acknowledge(projectKey, event, SYSTEM_USER);
+				acknowledge(context.projectGroupName(), event, SYSTEM_USER);
 			}
 		}
 	}
