@@ -59,6 +59,12 @@ public interface JiraConfig {
 		StatusesValueMapping statuses();
 
 		/**
+		 * Mapping of upstream resolutions to downstream ones. Please make sure to
+		 * review your project scheme to see which resolutions can be used.
+		 */
+		ResolutionValueMapping resolutions();
+
+		/**
 		 * Mapping of upstream issue types to downstream ones. Please make sure to
 		 * review your project scheme to see which issue types are available.
 		 */
@@ -345,6 +351,15 @@ public interface JiraConfig {
 		 *         issues downstream, without an override from an upstream updates.
 		 */
 		Map<String, Set<String>> ignoreTransitionCondition();
+	}
+
+	interface ResolutionValueMapping extends ValueMapping {
+		/**
+		 * @return The name of the resolution to apply for the transition applied to the
+		 *         upstream issue, caused by an update of a downstream issue, when
+		 *         there's no compatible backwards mapping.
+		 */
+		Optional<String> defaultUpstreamResolution();
 	}
 
 	interface UserValueMapping extends ValueMapping {

@@ -39,6 +39,7 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 	private final JiraConfig.JiraProjectGroup projectGroup;
 	private final Map<String, String> invertedUsers;
 	private final Map<String, String> invertedStatuses;
+	private final Map<String, String> invertedResolutions;
 	private final Map<String, HandlerProjectContext> projectContexts;
 	private final Pattern sourceLabelPattern;
 	private final JiraUser notMappedAssignee;
@@ -73,6 +74,7 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 
 		this.invertedUsers = invert(projectGroup.users().mapping());
 		this.invertedStatuses = invert(projectGroup.statuses().mapping());
+		this.invertedResolutions = invert(projectGroup.resolutions().mapping());
 		this.sourceJiraClient = source;
 		this.destinationJiraClient = destination;
 
@@ -207,6 +209,10 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 
 	public String upstreamStatus(String mappedValue) {
 		return invertedStatuses.get(mappedValue);
+	}
+
+	public String upstreamResolution(String mappedValue) {
+		return invertedResolutions.get(mappedValue);
 	}
 
 	public boolean isUserIgnored(String triggeredByUser) {
