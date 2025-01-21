@@ -19,6 +19,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraRemoteLink;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraSimpleObject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitionFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransitions;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraUser;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
@@ -44,7 +45,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 			// no need to apply the transition :)
 			return;
 		}
-		prepareTransition(sourceIssue.fields.status, destIssue).ifPresent(
+		prepareTransition(sourceIssue.fields.status, sourceIssue.fields.resolution, destIssue).ifPresent(
 				jiraTransition -> context.destinationJiraClient().transition(destinationKey, jiraTransition));
 	}
 
@@ -229,10 +230,20 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		return new JiraUser(context.projectGroup().users().mappedPropertyName(), value);
 	}
 
-	protected Optional<JiraTransition> prepareTransition(JiraSimpleObject sourceStatus, JiraIssue destIssue) {
+	protected Optional<JiraTransition> prepareTransition(JiraSimpleObject sourceStatus, JiraSimpleObject resolution,
+			JiraIssue destIssue) {
 		String downstreamStatus = context.projectGroup().statuses().mapping()
 				.get(sourceStatus.name.toLowerCase(Locale.ROOT));
-		return prepareTransition(downstreamStatus, destIssue);
+		Optional<JiraTransition> transition = prepareTransition(downstreamStatus, destIssue);
+		if (resolution != null) {
+			String downstreamResolution = context.projectGroup().resolutions().mapping()
+					.get(resolution.name.toLowerCase(Locale.ROOT));
+			return transition.map(t -> {
+				t.fields = JiraTransitionFields.forResolution(downstreamResolution);
+				return t;
+			});
+		}
+		return transition;
 	}
 
 	protected Optional<JiraTransition> prepareTransition(String downstreamStatus, JiraIssue destIssue) {

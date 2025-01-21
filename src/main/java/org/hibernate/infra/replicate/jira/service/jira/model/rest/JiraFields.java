@@ -30,6 +30,7 @@ public class JiraFields extends JiraBaseObject {
 	public JiraIssue parent;
 	public ZonedDateTime created;
 	public ZonedDateTime updated;
+	public JiraSimpleObject resolution;
 
 	public static JiraFields empty() {
 		JiraFields fields = new JiraFields();
@@ -42,8 +43,8 @@ public class JiraFields extends JiraBaseObject {
 	@Override
 	public String toString() {
 		return "JiraFields{" + "summary='" + summary + '\'' + ", description=" + description + ", priority=" + priority
-				+ ", issuetype=" + issuetype + ", project=" + project + ", labels=" + labels + "otherProperties="
-				+ properties() + '}';
+				+ ", issuetype=" + issuetype + ", project=" + project + ", resolution=" + resolution + ", labels="
+				+ labels + "otherProperties=" + properties() + '}';
 	}
 
 }

@@ -306,14 +306,6 @@ public final class HandlerProjectContext implements AutoCloseable {
 				|| !Objects.equals(upstreamVersion.releaseDate, downstreamVersion.releaseDate);
 	}
 
-	public String upstreamUser(String mappedValue) {
-		return projectGroupContext.upstreamUser(mappedValue);
-	}
-
-	public String upstreamStatus(String mappedValue) {
-		return projectGroupContext.upstreamStatus(mappedValue);
-	}
-
 	public String toDestinationKey(String key) {
 		if (keyToUpdatePattern.matcher(key).matches()) {
 			return "%s-%d".formatted(project().projectKey(), JiraIssue.keyToLong(key));

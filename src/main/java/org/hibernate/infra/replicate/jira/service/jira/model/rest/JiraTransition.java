@@ -9,16 +9,24 @@ import org.hibernate.infra.replicate.jira.service.jira.model.JiraBaseObject;
 public class JiraTransition extends JiraBaseObject {
 	public JiraIssueTransition transition;
 	public JiraUpdate update;
+	public JiraTransitionFields fields;
 
 	public JiraTransition() {
 	}
 
 	public JiraTransition(String transitionId) {
-		this(transitionId, null);
+		this(transitionId, null, null);
 	}
 
-	public JiraTransition(String transitionId, String comment) {
+	public JiraTransition(String transitionId, String resolution) {
+		this(transitionId, resolution, null);
+	}
+
+	public JiraTransition(String transitionId, String resolution, String comment) {
 		transition = new JiraIssueTransition(transitionId);
+		if (resolution != null) {
+			fields = JiraTransitionFields.forResolution(resolution);
+		}
 		if (comment != null && !comment.isBlank()) {
 			update = new JiraUpdate();
 			JiraBaseObject c = new JiraBaseObject();

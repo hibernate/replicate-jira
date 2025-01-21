@@ -28,6 +28,9 @@ public class JiraTransitionActionEventHandler extends JiraActionEventHandler {
 
 		String statusDownstream = issue.fields.status.name.toLowerCase(Locale.ROOT);
 		String statusCurrent = sourceIssue.fields.status.name.toLowerCase(Locale.ROOT);
+		String resolutionDownstream = issue.fields.resolution != null
+				? issue.fields.resolution.name.toLowerCase(Locale.ROOT)
+				: null;
 
 		if (context.projectGroup().statuses().ignoreTransitionCondition().getOrDefault(statusCurrent, Set.of())
 				.contains(statusDownstream)) {
@@ -35,15 +38,16 @@ public class JiraTransitionActionEventHandler extends JiraActionEventHandler {
 		}
 
 		String statusNew = context.upstreamStatus(statusDownstream);
+		String resolution = context.upstreamResolution(resolutionDownstream);
 
-		prepareTransition(statusNew, sourceIssue)
+		prepareTransition(statusNew, resolution, sourceIssue)
 				.ifPresent(jiraTransition -> context.sourceJiraClient().transition(sourceKey, jiraTransition));
 	}
 
-	protected Optional<JiraTransition> prepareTransition(String upstreamStatus, JiraIssue issue) {
+	protected Optional<JiraTransition> prepareTransition(String upstreamStatus, String resolution, JiraIssue issue) {
 		return statusToTransition(issue.fields.status.name, upstreamStatus, () -> JiraTransitions
 				.findRequiredTransitionId(context.sourceJiraClient(), failureCollector, upstreamStatus, issue))
-				.map(JiraTransition::new);
+				.map(id -> new JiraTransition(id, resolution));
 	}
 
 	protected Optional<String> statusToTransition(String from, String to, Supplier<Optional<String>> transitionFinder) {
