@@ -72,7 +72,10 @@ public final class HandlerProjectGroupContext implements AutoCloseable {
 				TimeUnit.MILLISECONDS, downstreamWorkQueue);
 
 		this.invertedUsers = invert(projectGroup.users().mapping());
-		this.invertedStatuses = invert(projectGroup.statuses().mapping());
+		// use the explicit config if present, but fallback to the inverted map
+		// otherwise.
+		this.invertedStatuses = projectGroup.downstreamStatuses().map(JiraConfig.ValueMapping::mapping)
+				.orElseGet(() -> invert(projectGroup.statuses().mapping()));
 		this.sourceJiraClient = source;
 		this.destinationJiraClient = destination;
 
