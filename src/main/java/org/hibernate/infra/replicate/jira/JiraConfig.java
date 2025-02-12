@@ -59,6 +59,12 @@ public interface JiraConfig {
 		StatusesValueMapping statuses();
 
 		/**
+		 * Same as {@link #statuses()}, but to map downstream statuses to upstream one
+		 * for the backwards sync.
+		 */
+		Optional<StatusesValueMapping> downstreamStatuses();
+
+		/**
 		 * Mapping of upstream issue types to downstream ones. Please make sure to
 		 * review your project scheme to see which issue types are available.
 		 */
