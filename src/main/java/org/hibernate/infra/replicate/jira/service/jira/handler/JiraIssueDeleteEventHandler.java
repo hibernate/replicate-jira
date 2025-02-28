@@ -11,7 +11,6 @@ import org.hibernate.infra.replicate.jira.service.jira.HandlerProjectGroupContex
 import org.hibernate.infra.replicate.jira.service.jira.client.JiraRestException;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraFields;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
-import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueTransition;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraTransition;
 import org.hibernate.infra.replicate.jira.service.reporting.ReportingConfig;
 
@@ -83,15 +82,14 @@ public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 	private Optional<JiraTransition> prepareTransition(JiraIssue issue) {
 		Optional<String> deletedStatus = context.projectGroup().statuses().deletedStatus();
 		if (deletedStatus.isPresent()) {
-			prepareTransition(deletedStatus.get(), issue);
-			JiraTransition transition = new JiraTransition();
-			transition.transition = new JiraIssueTransition(deletedStatus.get());
+			Optional<JiraTransition> transition = prepareTransition(deletedStatus.get(), issue);
 
-			Optional<String> deletedResolution = context.projectGroup().statuses().deletedResolution();
-			deletedResolution.ifPresent(
-					name -> transition.properties().put("fields", Map.of("resolution", Map.of("name", name))));
-
-			return Optional.of(transition);
+			return transition.map(tr -> {
+				Optional<String> deletedResolution = context.projectGroup().statuses().deletedResolution();
+				deletedResolution
+						.ifPresent(name -> tr.properties().put("fields", Map.of("resolution", Map.of("name", name))));
+				return tr;
+			});
 		}
 
 		return Optional.empty();
