@@ -113,7 +113,7 @@ abstract class JiraIssueAbstractEventHandler extends JiraEventHandler {
 		JiraIssue destinationIssue = new JiraIssue();
 		destinationIssue.fields = new JiraFields();
 
-		destinationIssue.fields.summary = sourceIssue.fields.summary;
+		destinationIssue.fields.summary = JiraFields.formatSummary(sourceIssue.fields.summary);
 		destinationIssue.fields.description = sourceIssue.fields.description;
 		destinationIssue.fields.description = "%s%s".formatted(prepareDescriptionQuote(sourceIssue),
 				Objects.toString(sourceIssue.fields.description, ""));

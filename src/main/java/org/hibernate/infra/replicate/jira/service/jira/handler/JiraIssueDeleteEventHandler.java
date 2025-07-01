@@ -56,7 +56,7 @@ public class JiraIssueDeleteEventHandler extends JiraIssueAbstractEventHandler {
 			JiraIssue updated = new JiraIssue();
 
 			updated.fields = new JiraFields();
-			updated.fields.summary = "%s upstream: %s".formatted(type, issue.fields.summary);
+			updated.fields.summary = "%s upstream: %s".formatted(type, JiraFields.formatSummary(issue.fields.summary));
 			if (issue.fields.labels == null) {
 				issue.fields.labels = List.of();
 			}
