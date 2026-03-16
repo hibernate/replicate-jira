@@ -17,6 +17,7 @@ import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssue;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulk;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssueBulkResponse;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraIssues;
+import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraProject;
 import org.hibernate.infra.replicate.jira.service.jira.model.rest.JiraVersion;
 
 import io.quarkus.logging.Log;
@@ -44,6 +45,7 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.projectName = projectName;
 		this.projectGroupContext = projectGroupContext;
 		this.project = projectGroup().projects().get(projectName());
+		this.verifyConfiguration(this.project, projectGroupContext);
 		this.currentIssueKeyNumber = new AtomicLong(getCurrentLatestJiraIssueKeyNumber());
 		this.bulk = new JiraIssueBulk(createIssuePlaceholder(), ISSUES_PER_REQUEST);
 		this.projectKeyWithDash = "%s-".formatted(project.projectKey());
@@ -51,6 +53,22 @@ public final class HandlerProjectContext implements AutoCloseable {
 		this.destFixVersions = getAndCreateMissingCurrentFixVersions(project, projectGroupContext,
 				projectGroupContext.sourceJiraClient(), projectGroupContext.destinationJiraClient());
 		this.keyToUpdatePattern = Pattern.compile("^%s-\\d+".formatted(project.originalProjectKey()));
+	}
+
+	private void verifyConfiguration(JiraConfig.JiraProject project, HandlerProjectGroupContext projectGroupContext) {
+		JiraProject upstream = projectGroupContext.sourceJiraClient().project(project.originalProjectKey());
+		JiraProject downstream = projectGroupContext.destinationJiraClient().project(project.projectId());
+
+		if (!upstream.key.equalsIgnoreCase(project.originalProjectKey())) {
+			throw new IllegalStateException("Configuration issue: upstream project keys do not match configured one: "
+					+ upstream.key + " vs " + project.originalProjectKey());
+		}
+
+		if (!downstream.key.equalsIgnoreCase(project.projectKey())) {
+			throw new IllegalStateException("Configuration issue: downstream project keys do not match configured one: "
+					+ downstream.key + " vs " + project.projectKey());
+		}
+
 	}
 
 	public JiraConfig.JiraProject project() {

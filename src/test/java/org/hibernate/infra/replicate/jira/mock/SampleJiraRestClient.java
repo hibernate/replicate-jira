@@ -246,7 +246,7 @@ public class SampleJiraRestClient implements JiraRestClient {
 	public JiraProject project(String projectId) {
 		JiraProject project = new JiraProject();
 		project.id = projectId;
-		project.key = "JIRATEST1";
+		project.key = "10324".equals(projectId) || "JIRATEST1".equals(projectId) ? "JIRATEST1" : "JIRATEST2";
 		return project;
 	}
 
