@@ -14,7 +14,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.32.3</quarkus.platform.version>
+        <quarkus.platform.version>3.34.1</quarkus.platform.version>
         <version.commons-csv>1.14.1</version.commons-csv>
         <version.assertj>3.27.0</version.assertj>
         <skipITs>true</skipITs>
@@ -129,7 +129,7 @@
         <dependency>
             <groupId>io.quarkiverse.wiremock</groupId>
             <artifactId>quarkus-wiremock-test</artifactId>
-            <version>1.5.3</version>
+            <version>1.6.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
