@@ -5,6 +5,8 @@ import java.time.ZonedDateTime;
 
 import org.hibernate.infra.replicate.jira.service.jira.model.JiraBaseObject;
 
+import jakarta.ws.rs.core.UriBuilder;
+
 public class JiraComment extends JiraBaseObject {
 
 	public String id;
@@ -24,5 +26,10 @@ public class JiraComment extends JiraBaseObject {
 
 	public boolean isUpdatedSameAsCreated() {
 		return updated != null && updated.equals(created);
+	}
+
+	public static String removeAtMentions(URI someJiraUri, String comment) {
+		String base = UriBuilder.fromUri(someJiraUri).replacePath("jira").path("people").build().toString();
+		return comment.replaceAll("\\[~accountid:([^\\]]++)\\]", "[@ user id($1)|" + base + "/$1]");
 	}
 }

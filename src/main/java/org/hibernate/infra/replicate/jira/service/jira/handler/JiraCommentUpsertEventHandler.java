@@ -50,7 +50,7 @@ public class JiraCommentUpsertEventHandler extends JiraCommentEventHandler {
 		JiraComment comment = new JiraComment();
 		// we add the quote as a first element, and then follow it up with the original
 		// comment content:
-		comment.body = prepareCommentQuote(issue, source) + source.body;
+		comment.body = prepareCommentQuote(issue, source) + JiraComment.removeAtMentions(source.self, source.body);
 
 		return comment;
 	}
