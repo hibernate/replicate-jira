@@ -18,8 +18,8 @@
         <version.commons-csv>1.14.1</version.commons-csv>
         <version.assertj>3.27.0</version.assertj>
         <skipITs>true</skipITs>
-        <surefire-plugin.version>3.5.5</surefire-plugin.version>
-        <spotless-maven-plugin.version>3.5.1</spotless-maven-plugin.version>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <spotless-maven-plugin.version>3.6.0</spotless-maven-plugin.version>
         <spotless.goal>apply</spotless.goal>
         <quarkus-helm.version>1.4.0</quarkus-helm.version>
     </properties>
