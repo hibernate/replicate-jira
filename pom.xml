@@ -19,7 +19,7 @@
         <version.assertj>3.27.0</version.assertj>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.6.0</surefire-plugin.version>
-        <spotless-maven-plugin.version>3.10.1</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.3</spotless-maven-plugin.version>
         <spotless.goal>apply</spotless.goal>
         <quarkus-helm.version>1.4.3</quarkus-helm.version>
     </properties>
